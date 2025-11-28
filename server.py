@@ -82,7 +82,8 @@ def create_ws_frame(message):
     return frame
 
 async def handle_tcp_client(reader, writer):
-    if len(state.tcp_clients) >= 2:
+    # Allow more clients so the breaker can join (passive listener)
+    if len(state.tcp_clients) >= 5:
         print(f"Rejected {writer.get_extra_info('peername')}: Server full")
         writer.close()
         await writer.wait_closed()
