@@ -10,6 +10,9 @@ import sys
 HEADER_HANDSHAKE = 0x01
 HEADER_MESSAGE = 0x02
 HEADER_SYSTEM = 0x03
+HEADER_KYBER_CAPSULE = 0x04
+MODE_ECC = 0x01
+MODE_KYBER = 0x02
 TCP_PORT = 8000
 WS_PORT = 8080
 WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -19,6 +22,7 @@ class ServerState:
         self.ws_clients = set()  # Set of asyncio.StreamWriter
         self.tcp_clients = {}    # id -> asyncio.StreamWriter
         self.public_keys = {}    # id -> bytes (full packet)
+        self.client_modes = {}   # id -> MODE_ECC or MODE_KYBER
         self.next_client_id = 0
 
     def add_tcp_client(self, writer):
@@ -30,9 +34,17 @@ class ServerState:
     def remove_tcp_client(self, client_id):
         if client_id in self.tcp_clients:
             del self.tcp_clients[client_id]
-        # Also remove public key if exists
+        # Also remove public key and mode if exists
         if client_id in self.public_keys:
             del self.public_keys[client_id]
+        if client_id in self.client_modes:
+            del self.client_modes[client_id]
+
+    def set_client_mode(self, client_id, mode):
+        self.client_modes[client_id] = mode
+    
+    def get_client_mode(self, client_id):
+        return self.client_modes.get(client_id, None)
 
     def add_ws_client(self, writer):
         self.ws_clients.add(writer)
@@ -124,24 +136,39 @@ async def handle_tcp_client(reader, writer):
             packet = header + payload
 
             if packet_type == HEADER_HANDSHAKE:
-                print(f" {client_name} sent public key ({length} bytes)")
+                # First byte of payload is the mode
+                if length < 1:
+                    print(f" {client_name} sent invalid handshake")
+                    continue
+                
+                mode = payload[0]
+                mode_str = "ECC" if mode == MODE_ECC else "KYBER" if mode == MODE_KYBER else "UNKNOWN"
+                
+                # Store the client mode
+                state.set_client_mode(client_id, mode)
+                
+                print(f" {client_name} sent {mode_str} public key ({length} bytes)")
                 
                 # Cache this public key
                 state.public_keys[client_id] = packet
                 
-                # Send ALL OTHER cached keys to THIS client
+                # Send ALL OTHER cached keys to THIS client (only same mode)
                 for other_id, other_packet in state.public_keys.items():
                     if other_id != client_id:
-                        try:
-                            writer.write(other_packet)
-                            await writer.drain()
-                        except Exception as e:
-                            print(f"Error sending cached key to {client_name}: {e}")
+                        other_mode = state.get_client_mode(other_id)
+                        # Only forward if same mode
+                        if other_mode == mode:
+                            try:
+                                writer.write(other_packet)
+                                await writer.drain()
+                            except Exception as e:
+                                print(f"Error sending cached key to {client_name}: {e}")
 
                 # Broadcast to WS
                 await broadcast_ws({
                     "type": "PUBKEY",
                     "from": client_name,
+                    "mode": mode_str,
                     "hex": hex_payload
                 })
 
@@ -155,10 +182,21 @@ async def handle_tcp_client(reader, writer):
                     "hex": hex_payload
                 })
                 
+            elif packet_type == HEADER_KYBER_CAPSULE:
+                print(f" {client_name} sent Kyber capsule ({length} bytes)")
+                
+                # Broadcast to WS
+                await broadcast_ws({
+                    "type": "KYBER_CAPSULE",
+                    "from": client_name,
+                    "hex": hex_payload
+                })
+                
             else:
                 print(f"Unknown packet type: {packet_type}")
 
-            # Forward to ALL OTHER TCP clients
+            # Forward to ALL OTHER TCP clients (regardless of mode for messages/capsules)
+            # This allows mixed networks where some use ECC and some use Kyber
             for other_id, other_writer in state.tcp_clients.items():
                 if other_id != client_id:
                     try:
@@ -166,7 +204,6 @@ async def handle_tcp_client(reader, writer):
                         await other_writer.drain()
                     except Exception as e:
                         print(f"Error forwarding to C{other_id+1}: {e}")
-                        # We could remove the client here, but we'll let its own handler deal with it
 
     except (ConnectionResetError, asyncio.IncompleteReadError):
         pass
