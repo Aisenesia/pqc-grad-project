@@ -245,7 +245,7 @@ def receive_messages(sock, mode, crypto_data, key_manager):
             
             if packet_type == HEADER_SYSTEM:
                 try:
-                    print(f"\n[System] {payload.decode('utf-8')}")
+                    print(f"\n[System] {payload.decode('utf-8')}", flush=True)
                 except:
                     pass
                 continue
@@ -278,9 +278,9 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                     
                     key_manager.set_key(shared_key)
                     if not HEADLESS_MODE:
-                        print(f"\n[ECC Key Update] Handshake received from ECC peer.")
-                        print(f"Shared point X: {hex(shared_point.x)[2:]}")
-                        print(f"Symmetric key: {shared_key.hex()}")
+                        print(f"\n[ECC Key Update] Handshake received from ECC peer.", flush=True)
+                        print(f"Shared point X: {hex(shared_point.x)[2:]}", flush=True)
+                        print(f"Symmetric key: {shared_key.hex()}", flush=True)
                 
                 # Handle Kyber handshake
                 elif mode == MODE_KYBER and peer_mode == MODE_KYBER:
@@ -297,8 +297,8 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                         key_manager.set_key(shared_secret)
                         key_manager.set_encapsulated()
                         if not HEADLESS_MODE:
-                            print(f"\n[KYBER Key Update] Encapsulated with peer's public key.")
-                            print(f"Shared secret: {shared_secret.hex()}")
+                            print(f"\n[KYBER Key Update] Encapsulated with peer's public key.", flush=True)
+                            print(f"Shared secret: {shared_secret.hex()}", flush=True)
                         
                         # Send capsule back
                         capsule_payload = ciphertext
@@ -307,11 +307,11 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                     else:
                         # We wait for the capsule from peer
                         if not HEADLESS_MODE:
-                            print(f"\n[KYBER] Received peer's public key. Waiting for capsule...")
+                            print(f"\n[KYBER] Received peer's public key. Waiting for capsule...", flush=True)
                 
                 else:
                     if not HEADLESS_MODE:
-                        print(f"\n[Warning] Mode mismatch: You are in {'ECC' if mode == MODE_ECC else 'KYBER'} mode, peer is in {'ECC' if peer_mode == MODE_ECC else 'KYBER'} mode.")
+                        print(f"\n[Warning] Mode mismatch: You are in {'ECC' if mode == MODE_ECC else 'KYBER'} mode, peer is in {'ECC' if peer_mode == MODE_ECC else 'KYBER'} mode.", flush=True)
                 
                 continue
             
@@ -327,8 +327,8 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                 
                 key_manager.set_key(shared_secret)
                 if not HEADLESS_MODE:
-                    print(f"\n[KYBER Key Update] Decapsulated ciphertext.")
-                    print(f"Shared secret: {shared_secret.hex()}")
+                    print(f"\n[KYBER Key Update] Decapsulated ciphertext.", flush=True)
+                    print(f"Shared secret: {shared_secret.hex()}", flush=True)
                 continue
 
             if packet_type == HEADER_MESSAGE:
@@ -350,10 +350,10 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                 
                 try:
                     if not HEADLESS_MODE:
-                        print(f"Received: {plaintext.decode('utf-8')}")
+                        print(f"Received: {plaintext.decode('utf-8')}", flush=True)
                 except UnicodeDecodeError:
                     if not HEADLESS_MODE:
-                        print("Received invalid UTF-8 message")
+                        print("Received invalid UTF-8 message", flush=True)
                 
         except (OSError, struct.error):
             if not HEADLESS_MODE:

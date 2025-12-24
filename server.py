@@ -5,6 +5,7 @@ import json
 import hashlib
 import base64
 import sys
+import os
 import subprocess
 from pathlib import Path
 
@@ -462,14 +463,19 @@ async def start_client_process(mode):
         else:
             CREATE_NO_WINDOW = 0
         
+        # Set up environment with unbuffered Python output
+        env = os.environ.copy()
+        env['PYTHONUNBUFFERED'] = '1'
+        
         # Start client with PIPE for stdin/stdout (not headless anymore, but no window)
         process = subprocess.Popen(
-            [sys.executable, str(client_script), '--mode', mode],
+            [sys.executable, '-u', str(client_script), '--mode', mode],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,  # Merge stderr into stdout
             creationflags=CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
-            bufsize=0  # Unbuffered
+            bufsize=1,  # Line buffered
+            env=env
         )
         
         process_id = state.next_process_id
