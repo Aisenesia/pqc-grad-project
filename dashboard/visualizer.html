@@ -734,6 +734,40 @@
                 this.pulsePhase += 0.05;
             }
             
+            applyRepulsion(otherNodes) {
+                // Repel from other nodes to prevent overlap
+                const minDistance = this.radius * 1.5; // Minimum distance between nodes
+                
+                otherNodes.forEach(other => {
+                    if (other === this) return;
+                    
+                    const dx = this.x - other.x;
+                    const dy = this.y - other.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < minDistance && distance > 0) {
+                        // Calculate repulsion force (much weaker)
+                        const force = (minDistance - distance) / minDistance * 0.20;
+                        const angle = Math.atan2(dy, dx);
+                        
+                        // Apply force
+                        this.vx += Math.cos(angle) * force;
+                        this.vy += Math.sin(angle) * force;
+                    }
+                });
+                
+                // Apply damping to reduce velocity over time
+                
+                
+                // Cap velocity
+                const maxSpeed = 0.7;
+                const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
+                if (speed > maxSpeed) {
+                    this.vx = (this.vx / speed) * maxSpeed;
+                    this.vy = (this.vy / speed) * maxSpeed;
+                }
+            }
+            
             draw(ctx) {
                 // Glow effect
                 const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
@@ -855,6 +889,7 @@
         const serverNode = new ServerNode();
         let serverConnected = false;
         const clientsWithProcessId = new Map(); // Store client metadata including processId
+        let stateSyncReceived = false; // Track if we've received state sync to prevent duplicates
         
         // Animation loop
         function animate() {
@@ -881,7 +916,15 @@
             }
             
             // Update and draw clients
-            clients.forEach(client => {
+            const clientArray = Array.from(clients.values());
+            
+            // First apply repulsion between all clients
+            clientArray.forEach(client => {
+                client.applyRepulsion(clientArray);
+            });
+            
+            // Then update positions and draw
+            clientArray.forEach(client => {
                 client.update();
                 client.draw(ctx);
             });
@@ -938,6 +981,13 @@
         };
         
         function handleStateSync(data) {
+            // Only process state sync once
+            if (stateSyncReceived) {
+                console.log('Ignoring duplicate state sync');
+                return;
+            }
+            stateSyncReceived = true;
+            
             console.log('Received state sync:', data);
             
             // Restore connected TCP clients (network nodes)

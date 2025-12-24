@@ -299,8 +299,8 @@ async def handle_ws_client(reader, writer):
         print(f"WebSocket handshake successful with {addr}")
         state.add_ws_client(writer)
         
-        # Send current server state to the newly connected client
-        await send_current_state(writer)
+        # Don't send state automatically - let client request it via get_state command
+        # This prevents duplicate state syncs
         
         # Keep connection open (we only send data, we don't really process incoming WS frames)
         # But we need to read to detect disconnection
