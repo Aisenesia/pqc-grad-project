@@ -5,6 +5,7 @@ import sys
 import struct
 import secrets
 import time
+import argparse
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 import lib
@@ -18,6 +19,9 @@ MODE_ECC = 0x01
 MODE_KYBER = 0x02
 PORT = 8000
 HOST = '127.0.0.1'
+
+# Global flag for headless mode
+HEADLESS_MODE = False
 
 class KeyManager:
     def __init__(self):
@@ -64,28 +68,47 @@ class KeyManager:
             return self.has_encapsulated
 
 def main():
-    # Select mode
-    print("Select cryptography mode:")
-    print("1. ECC (Elliptic Curve Cryptography - secp256k1)")
-    print("2. KYBER (Post-Quantum KEM - Kyber512)")
+    global HEADLESS_MODE
     
-    while True:
-        choice = input("Enter 1 or 2: ").strip()
-        if choice == '1':
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Crypto Network Client')
+    parser.add_argument('--mode', choices=['ECC', 'KYBER', '1', '2'], 
+                        help='Cryptography mode: ECC/1 or KYBER/2')
+    parser.add_argument('--headless', action='store_true',
+                        help='Run in headless mode (no interactive input)')
+    args = parser.parse_args()
+    
+    HEADLESS_MODE = args.headless
+    
+    # Select mode
+    if args.mode:
+        if args.mode in ['ECC', '1']:
             mode = MODE_ECC
-            break
-        elif choice == '2':
-            mode = MODE_KYBER
-            break
         else:
-            print("Invalid choice. Please enter 1 or 2.")
+            mode = MODE_KYBER
+    else:
+        print("Select cryptography mode:")
+        print("1. ECC (Elliptic Curve Cryptography - secp256k1)")
+        print("2. KYBER (Post-Quantum KEM - Kyber512)")
+        
+        while True:
+            choice = input("Enter 1 or 2: ").strip()
+            if choice == '1':
+                mode = MODE_ECC
+                break
+            elif choice == '2':
+                mode = MODE_KYBER
+                break
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
     
     # Connect to Server
     try:
         sock = socket.create_connection((HOST, PORT))
     except ConnectionRefusedError:
-        print("Failed to connect. Make sure the interceptor server is running!")
-        return
+        if not HEADLESS_MODE:
+            print("Failed to connect. Make sure the interceptor server is running!")
+        sys.exit(1)
     
     # Initialize based on mode
     if mode == MODE_ECC:
@@ -93,10 +116,11 @@ def main():
         private_key = lib.generate_private_key(curve)
         public_key = lib.derive_public_key(curve, private_key)
 
-        print(f"\n=== ECC Mode ===")
-        print(f"Private key: {hex(private_key)[2:]} (keep secret!)")
-        print(f"Public key X: {hex(public_key.x)[2:]}")
-        print(f"Public key Y: {hex(public_key.y)[2:]}")
+        if not HEADLESS_MODE:
+            print(f"\n=== ECC Mode ===")
+            print(f"Private key: {hex(private_key)[2:]} (keep secret!)")
+            print(f"Public key X: {hex(public_key.x)[2:]}")
+            print(f"Public key Y: {hex(public_key.y)[2:]}")
         
         # Send ECC Public Key
         send_ecc_public_key(sock, public_key)
@@ -106,9 +130,10 @@ def main():
         params = lib.kyber512_params()
         public_key, secret_key = lib.kyber_keygen(params)
         
-        print(f"\n=== KYBER Mode ===")
-        print(f"Public key: {len(public_key)} bytes")
-        print(f"Secret key: {len(secret_key)} bytes")
+        if not HEADLESS_MODE:
+            print(f"\n=== KYBER Mode ===")
+            print(f"Public key: {len(public_key)} bytes")
+            print(f"Secret key: {len(secret_key)} bytes")
         
         # Send Kyber Public Key
         send_kyber_public_key(sock, public_key)
@@ -121,8 +146,9 @@ def main():
     if mode == MODE_KYBER:
         key_manager.set_kyber_keys(public_key, crypto_data[1], crypto_data[0])
 
-    print("\n(Messages are encrypted with AES-256-CTR)")
-    print("Waiting for peer handshake...")
+    if not HEADLESS_MODE:
+        print("\n(Messages are encrypted with AES-256-CTR)")
+        print("Waiting for peer handshake...")
 
     # Start Receive Thread
     recv_thread = threading.Thread(
@@ -133,7 +159,15 @@ def main():
     recv_thread.start()
 
     # Send Loop
-    send_messages(sock, key_manager)
+    if HEADLESS_MODE:
+        # In headless mode, just keep the connection alive
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
+    else:
+        send_messages(sock, key_manager)
 
 def send_ecc_public_key(sock, public_key):
     x_bytes = public_key.x.to_bytes(32, 'big')
@@ -155,12 +189,20 @@ def send_messages(sock, key_manager):
     while key_manager.get_key() is None:
         time.sleep(0.1)
 
-    print("Type a message and press Enter:")
+    if not HEADLESS_MODE:
+        print("Type a message and press Enter:")
+    
     while True:
         try:
+            if HEADLESS_MODE:
+                # In headless mode, don't try to read from stdin
+                time.sleep(1)
+                continue
+            
             line = input()
         except (EOFError, KeyboardInterrupt):
-            print("\nExiting...")
+            if not HEADLESS_MODE:
+                print("\nExiting...")
             break
             
         if not line:
@@ -168,7 +210,8 @@ def send_messages(sock, key_manager):
             
         shared_key = key_manager.get_key()
         if shared_key is None:
-            print("No peer connected. Cannot send encrypted message.")
+            if not HEADLESS_MODE:
+                print("No peer connected. Cannot send encrypted message.")
             continue
 
         plaintext = line.encode('utf-8')
@@ -185,7 +228,8 @@ def send_messages(sock, key_manager):
         try:
             sock.sendall(header + payload)
         except OSError:
-            print("Socket closed.")
+            if not HEADLESS_MODE:
+                print("Socket closed.")
             break
 
 def receive_messages(sock, mode, crypto_data, key_manager):
@@ -233,9 +277,10 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                     shared_key = lib.point_to_shared_key(shared_point)
                     
                     key_manager.set_key(shared_key)
-                    print(f"\n[ECC Key Update] Handshake received from ECC peer.")
-                    print(f"Shared point X: {hex(shared_point.x)[2:]}")
-                    print(f"Symmetric key: {shared_key.hex()}")
+                    if not HEADLESS_MODE:
+                        print(f"\n[ECC Key Update] Handshake received from ECC peer.")
+                        print(f"Shared point X: {hex(shared_point.x)[2:]}")
+                        print(f"Symmetric key: {shared_key.hex()}")
                 
                 # Handle Kyber handshake
                 elif mode == MODE_KYBER and peer_mode == MODE_KYBER:
@@ -251,8 +296,9 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                         
                         key_manager.set_key(shared_secret)
                         key_manager.set_encapsulated()
-                        print(f"\n[KYBER Key Update] Encapsulated with peer's public key.")
-                        print(f"Shared secret: {shared_secret.hex()}")
+                        if not HEADLESS_MODE:
+                            print(f"\n[KYBER Key Update] Encapsulated with peer's public key.")
+                            print(f"Shared secret: {shared_secret.hex()}")
                         
                         # Send capsule back
                         capsule_payload = ciphertext
@@ -260,31 +306,36 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                         sock.sendall(capsule_header + capsule_payload)
                     else:
                         # We wait for the capsule from peer
-                        print(f"\n[KYBER] Received peer's public key. Waiting for capsule...")
+                        if not HEADLESS_MODE:
+                            print(f"\n[KYBER] Received peer's public key. Waiting for capsule...")
                 
                 else:
-                    print(f"\n[Warning] Mode mismatch: You are in {'ECC' if mode == MODE_ECC else 'KYBER'} mode, peer is in {'ECC' if peer_mode == MODE_ECC else 'KYBER'} mode.")
+                    if not HEADLESS_MODE:
+                        print(f"\n[Warning] Mode mismatch: You are in {'ECC' if mode == MODE_ECC else 'KYBER'} mode, peer is in {'ECC' if peer_mode == MODE_ECC else 'KYBER'} mode.")
                 
                 continue
             
             if packet_type == HEADER_KYBER_CAPSULE:
                 # Decapsulate the ciphertext
                 if mode != MODE_KYBER:
-                    print("\n[Warning] Received Kyber capsule but not in Kyber mode")
+                    if not HEADLESS_MODE:
+                        print("\n[Warning] Received Kyber capsule but not in Kyber mode")
                     continue
                 
                 our_pk, our_sk, params = key_manager.get_kyber_keys()
                 shared_secret = lib.kyber_decapsulate(payload, our_sk, params)
                 
                 key_manager.set_key(shared_secret)
-                print(f"\n[KYBER Key Update] Decapsulated ciphertext.")
-                print(f"Shared secret: {shared_secret.hex()}")
+                if not HEADLESS_MODE:
+                    print(f"\n[KYBER Key Update] Decapsulated ciphertext.")
+                    print(f"Shared secret: {shared_secret.hex()}")
                 continue
 
             if packet_type == HEADER_MESSAGE:
                 shared_key = key_manager.get_key()
                 if shared_key is None:
-                    print("\nReceived message but no key established.")
+                    if not HEADLESS_MODE:
+                        print("\nReceived message but no key established.")
                     continue
 
                 if len(payload) < 16:
@@ -298,12 +349,15 @@ def receive_messages(sock, mode, crypto_data, key_manager):
                 plaintext = cipher.decrypt(ciphertext)
                 
                 try:
-                    print(f"Received: {plaintext.decode('utf-8')}")
+                    if not HEADLESS_MODE:
+                        print(f"Received: {plaintext.decode('utf-8')}")
                 except UnicodeDecodeError:
-                    print("Received invalid UTF-8 message")
+                    if not HEADLESS_MODE:
+                        print("Received invalid UTF-8 message")
                 
         except (OSError, struct.error):
-            print("\nConnection lost.")
+            if not HEADLESS_MODE:
+                print("\nConnection lost.")
             os._exit(0)
 
 def recv_exact(sock, n):

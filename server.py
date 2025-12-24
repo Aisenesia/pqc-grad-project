@@ -5,6 +5,8 @@ import json
 import hashlib
 import base64
 import sys
+import subprocess
+from pathlib import Path
 
 # Constants
 HEADER_HANDSHAKE = 0x01
@@ -24,6 +26,8 @@ class ServerState:
         self.public_keys = {}    # id -> bytes (full packet)
         self.client_modes = {}   # id -> MODE_ECC or MODE_KYBER
         self.next_client_id = 0
+        self.client_processes = {}  # process_id -> {'process': Popen, 'mode': str, 'name': str}
+        self.next_process_id = 0
 
     def add_tcp_client(self, writer):
         client_id = self.next_client_id
@@ -246,6 +250,11 @@ async def handle_ws_client(reader, writer):
         request_data = await reader.readuntil(b'\r\n\r\n')
         request_str = request_data.decode('utf-8')
         
+        # Check if this is an HTTP control request
+        if request_str.startswith('POST /start-client'):
+            await handle_http_start_client(request_str, reader, writer)
+            return
+        
         # Extract Sec-WebSocket-Key
         key = None
         for line in request_str.split('\r\n'):
@@ -283,9 +292,12 @@ async def handle_ws_client(reader, writer):
             # Just read and discard (or detect close)
             # A minimal frame is 2 bytes.
             try:
-                _ = await reader.read(1024)
+                data = await reader.read(1024)
                 if reader.at_eof():
                     break
+                # Handle incoming WebSocket control commands
+                if data:
+                    await handle_ws_message(data, writer)
             except Exception:
                 break
                 
@@ -299,6 +311,195 @@ async def handle_ws_client(reader, writer):
             await writer.wait_closed()
         except:
             pass
+
+async def handle_ws_message(data, writer):
+    """Handle incoming WebSocket messages for control commands"""
+    try:
+        # Skip WebSocket frame header (basic parsing)
+        if len(data) < 2:
+            return
+        
+        # Check if it's a text frame (opcode 0x1)
+        opcode = data[0] & 0x0F
+        if opcode != 0x1:
+            return
+        
+        # Get payload length and mask
+        masked = (data[1] & 0x80) != 0
+        payload_len = data[1] & 0x7F
+        
+        offset = 2
+        if payload_len == 126:
+            payload_len = int.from_bytes(data[2:4], 'big')
+            offset = 4
+        elif payload_len == 127:
+            payload_len = int.from_bytes(data[2:10], 'big')
+            offset = 10
+        
+        if masked:
+            mask = data[offset:offset+4]
+            offset += 4
+            payload = bytearray(data[offset:offset+payload_len])
+            for i in range(len(payload)):
+                payload[i] ^= mask[i % 4]
+            message = payload.decode('utf-8')
+        else:
+            message = data[offset:offset+payload_len].decode('utf-8')
+        
+        # Parse JSON command
+        cmd = json.loads(message)
+        
+        if cmd.get('command') == 'start_client':
+            mode = cmd.get('mode', 'ECC')
+            await start_client_process(mode)
+        elif cmd.get('command') == 'send_to_client':
+            process_id = cmd.get('processId')
+            msg = cmd.get('message', '')
+            
+            if process_id in state.client_processes:
+                client_info = state.client_processes[process_id]
+                process = client_info['process']
+                
+                # Write to client's stdin
+                try:
+                    process.stdin.write((msg + '\n').encode('utf-8'))
+                    process.stdin.flush()
+                except Exception as e:
+                    print(f"Error writing to client stdin: {e}")
+            
+    except Exception as e:
+        print(f"Error handling WS message: {e}")
+
+async def handle_http_start_client(request_str, reader, writer):
+    """Handle HTTP POST request to start a client"""
+    try:
+        # Read body if present
+        content_length = 0
+        for line in request_str.split('\r\n'):
+            if line.lower().startswith('content-length:'):
+                content_length = int(line.split(':')[1].strip())
+        
+        body = b''
+        if content_length > 0:
+            body = await reader.read(content_length)
+        
+        # Parse mode from body
+        mode = 'ECC'
+        if body:
+            try:
+                data = json.loads(body.decode('utf-8'))
+                mode = data.get('mode', 'ECC')
+            except:
+                pass
+        
+        # Start client
+        await start_client_process(mode)
+        
+        # Send response
+        response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "\r\n"
+            '{"status": "ok", "message": "Client started"}'
+        )
+        writer.write(response.encode('utf-8'))
+        await writer.drain()
+        
+    except Exception as e:
+        print(f"Error starting client: {e}")
+        response = (
+            "HTTP/1.1 500 Internal Server Error\r\n"
+            "Content-Type: application/json\r\n"
+            "\r\n"
+            f'{{"status": "error", "message": "{str(e)}"}}'
+        )
+        writer.write(response.encode('utf-8'))
+        await writer.drain()
+    finally:
+        writer.close()
+        await writer.wait_closed()
+
+async def read_client_output(process_id, process):
+    """Read stdout from client process and broadcast to WebSocket"""
+    try:
+        loop = asyncio.get_event_loop()
+        while True:
+            # Read line from stdout (blocking, so run in executor)
+            line = await loop.run_in_executor(None, process.stdout.readline)
+            if not line:
+                break  # Process ended
+            
+            text = line.decode('utf-8', errors='ignore').rstrip()
+            if text:
+                # Broadcast to WebSocket
+                await broadcast_ws({
+                    "type": "CLIENT_OUTPUT",
+                    "processId": process_id,
+                    "output": text
+                })
+    except Exception as e:
+        print(f"Error reading client output: {e}")
+    finally:
+        # Process ended
+        if process_id in state.client_processes:
+            client_info = state.client_processes[process_id]
+            await broadcast_ws({
+                "type": "CLIENT_ENDED",
+                "processId": process_id,
+                "name": client_info['name']
+            })
+            del state.client_processes[process_id]
+
+async def start_client_process(mode):
+    """Start a client process with the given mode (ECC or KYBER)"""
+    try:
+        client_script = Path(__file__).parent / 'client.py'
+        
+        # Windows-specific flag to prevent window creation
+        if sys.platform == 'win32':
+            CREATE_NO_WINDOW = 0x08000000
+        else:
+            CREATE_NO_WINDOW = 0
+        
+        # Start client with PIPE for stdin/stdout (not headless anymore, but no window)
+        process = subprocess.Popen(
+            [sys.executable, str(client_script), '--mode', mode],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Merge stderr into stdout
+            creationflags=CREATE_NO_WINDOW if sys.platform == 'win32' else 0,
+            bufsize=0  # Unbuffered
+        )
+        
+        process_id = state.next_process_id
+        state.next_process_id += 1
+        client_name = f"C{process_id + 1}"
+        
+        state.client_processes[process_id] = {
+            'process': process,
+            'mode': mode,
+            'name': client_name,
+            'pid': process.pid
+        }
+        
+        # Start async task to read stdout and broadcast to WebSocket
+        asyncio.create_task(read_client_output(process_id, process))
+        
+        print(f"Started {mode} client process {client_name} (PID: {process.pid})")
+        
+        # Broadcast to WebSocket clients
+        await broadcast_ws({
+            "type": "EVENT",
+            "message": f"Started {mode} client {client_name} (PID: {process.pid})"
+        })
+        
+    except Exception as e:
+        print(f"Failed to start client: {e}")
+        await broadcast_ws({
+            "type": "EVENT",
+            "message": f"Error starting client: {str(e)}"
+        })
 
 async def main():
     # Start TCP Server
