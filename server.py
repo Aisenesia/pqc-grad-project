@@ -29,6 +29,8 @@ class ServerState:
         self.next_client_id = 0
         self.client_processes = {}  # process_id -> {'process': Popen, 'mode': str, 'name': str}
         self.next_process_id = 0
+        self.client_to_process = {}  # client_id -> process_id (for kill tracking)
+        self.pending_process_id = None  # Track the most recently started process waiting for connection
 
     def add_tcp_client(self, writer):
         client_id = self.next_client_id
@@ -110,6 +112,13 @@ async def handle_tcp_client(reader, writer):
     addr = writer.get_extra_info('peername')
     client_name = f"C{client_id + 1}"
     
+    # Associate with pending process if one exists
+    if state.pending_process_id is not None:
+        state.client_to_process[client_id] = state.pending_process_id
+        process_info = state.client_processes.get(state.pending_process_id, {})
+        print(f"Associated TCP client {client_name} with process {process_info.get('name', 'unknown')}")
+        state.pending_process_id = None  # Clear pending
+    
     print(f"TCP Client connected: {addr} (ID: {client_id})")
     
     # Broadcast connection event
@@ -170,11 +179,14 @@ async def handle_tcp_client(reader, writer):
                                 print(f"Error sending cached key to {client_name}: {e}")
 
                 # Broadcast to WS
+                process_id = state.client_to_process.get(client_id)
                 await broadcast_ws({
                     "type": "PUBKEY",
                     "from": client_name,
                     "mode": mode_str,
-                    "hex": hex_payload
+                    "hex": hex_payload,
+                    "clientId": client_id,
+                    "processId": process_id
                 })
 
             elif packet_type == HEADER_MESSAGE:
@@ -287,6 +299,9 @@ async def handle_ws_client(reader, writer):
         print(f"WebSocket handshake successful with {addr}")
         state.add_ws_client(writer)
         
+        # Send current server state to the newly connected client
+        await send_current_state(writer)
+        
         # Keep connection open (we only send data, we don't really process incoming WS frames)
         # But we need to read to detect disconnection
         while True:
@@ -353,6 +368,12 @@ async def handle_ws_message(data, writer):
         if cmd.get('command') == 'start_client':
             mode = cmd.get('mode', 'ECC')
             await start_client_process(mode)
+        elif cmd.get('command') == 'get_state':
+            # Send current state to requesting client
+            await send_current_state(writer)
+        elif cmd.get('command') == 'kill_client':
+            client_id = cmd.get('clientId')
+            await kill_client_process(client_id)
         elif cmd.get('command') == 'send_to_client':
             process_id = cmd.get('processId')
             msg = cmd.get('message', '')
@@ -370,6 +391,50 @@ async def handle_ws_message(data, writer):
             
     except Exception as e:
         print(f"Error handling WS message: {e}")
+
+async def send_current_state(ws_writer):
+    """Send current server state to a WebSocket client"""
+    try:
+        # Build state of connected TCP clients
+        clients_state = []
+        for client_id, writer in state.tcp_clients.items():
+            client_name = f"C{client_id + 1}"
+            mode = state.get_client_mode(client_id)
+            mode_str = "ECC" if mode == MODE_ECC else "KYBER" if mode == MODE_KYBER else "UNKNOWN"
+            
+            # Include process_id if this client was spawned by server
+            process_id = state.client_to_process.get(client_id)
+            
+            clients_state.append({
+                "name": client_name,
+                "mode": mode_str,
+                "id": client_id,
+                "processId": process_id
+            })
+        
+        # Build state of running client processes
+        processes_state = []
+        for process_id, client_info in state.client_processes.items():
+            processes_state.append({
+                "processId": process_id,
+                "name": client_info['name'],
+                "mode": client_info['mode'],
+                "pid": client_info['pid']
+            })
+        
+        state_message = {
+            "type": "STATE_SYNC",
+            "clients": clients_state,
+            "processes": processes_state
+        }
+        
+        json_str = json.dumps(state_message)
+        frame = create_ws_frame(json_str)
+        ws_writer.write(frame)
+        await ws_writer.drain()
+        
+    except Exception as e:
+        print(f"Error sending state: {e}")
 
 async def handle_http_start_client(request_str, reader, writer):
     """Handle HTTP POST request to start a client"""
@@ -451,6 +516,70 @@ async def read_client_output(process_id, process):
                 "name": client_info['name']
             })
             del state.client_processes[process_id]
+            
+        # Also clean up client_to_process mapping
+        for cid, pid in list(state.client_to_process.items()):
+            if pid == process_id:
+                del state.client_to_process[cid]
+                break
+
+async def kill_client_process(client_id):
+    """Kill a client process by client_id"""
+    try:
+        if client_id not in state.client_to_process:
+            print(f"Client {client_id} not associated with any process")
+            await broadcast_ws({
+                "type": "EVENT",
+                "message": f"Client C{client_id + 1} cannot be killed (not a managed process)"
+            })
+            return
+        
+        process_id = state.client_to_process[client_id]
+        
+        if process_id not in state.client_processes:
+            print(f"Process {process_id} not found")
+            return
+        
+        client_info = state.client_processes[process_id]
+        process = client_info['process']
+        client_name = client_info['name']
+        client_pid = client_info['pid']  # Save PID before cleanup
+        
+        print(f"Terminating client process {client_name} (PID: {client_pid})")
+        
+        # Terminate the process
+        try:
+            process.terminate()
+            # Give it a moment to terminate gracefully
+            await asyncio.sleep(0.5)
+            if process.poll() is None:
+                # Force kill if still running
+                process.kill()
+        except Exception as e:
+            print(f"Error killing process: {e}")
+        
+        # Clean up
+        del state.client_processes[process_id]
+        del state.client_to_process[client_id]
+        
+        # Notify WebSocket clients that terminal should be removed
+        await broadcast_ws({
+            "type": "CLIENT_ENDED",
+            "processId": process_id,
+            "name": client_name
+        })
+        
+        await broadcast_ws({
+            "type": "EVENT",
+            "message": f"Killed client process {client_name} (PID: {client_pid})"
+        })
+        
+    except Exception as e:
+        print(f"Error killing client: {e}")
+        await broadcast_ws({
+            "type": "EVENT",
+            "message": f"Error killing client: {str(e)}"
+        })
 
 async def start_client_process(mode):
     """Start a client process with the given mode (ECC or KYBER)"""
@@ -488,6 +617,9 @@ async def start_client_process(mode):
             'name': client_name,
             'pid': process.pid
         }
+        
+        # Mark this process as pending connection
+        state.pending_process_id = process_id
         
         # Start async task to read stdout and broadcast to WebSocket
         asyncio.create_task(read_client_output(process_id, process))

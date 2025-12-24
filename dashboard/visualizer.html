@@ -151,7 +151,7 @@
         }
 
         .terminal-select {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.4);
             border: 1px solid var(--border);
             border-radius: 4px;
             padding: 4px 8px;
@@ -160,9 +160,14 @@
             cursor: pointer;
             outline: none;
         }
+        
+        .terminal-select option {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
 
         .terminal-select:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(0, 0, 0, 0.6);
         }
 
         .terminal-content {
@@ -538,18 +543,19 @@
 
         <div id="visualization" class="panel">
             <canvas id="network-canvas"></canvas>
-            <div class="legend" style="position: absolute; top: 20px; left: 20px; background: rgba(26, 31, 58, 0.9); padding: 10px; border-radius: 5px; border: 1px solid var(--border);">
+            <div class="legend" style="position: absolute; top: 20px; left: 20px; background: rgba(26, 31, 58, 0.9); padding: 12px; border-radius: 5px; border: 1px solid var(--border);">
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 8px; font-weight: 600;">TRAFFIC LEGEND</div>
                 <div class="legend-item">
                     <div class="legend-color" style="background: var(--accent-ecc);"></div>
-                    <span>ECC</span>
+                    <span>ECC Key Exchange</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color" style="background: var(--accent-kyber);"></div>
-                    <span>Kyber</span>
+                    <span>Kyber Key Exchange</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color" style="background: var(--accent-green);"></div>
-                    <span>Message</span>
+                    <span>Encrypted Message</span>
                 </div>
             </div>
         </div>
@@ -633,10 +639,6 @@
         // WebSocket connection
         const ws = new WebSocket('ws://127.0.0.1:8080');
         
-        // State management
-        const clients = new Map();
-        const particles = [];
-        
         // Canvas setup
         const canvas = document.getElementById('network-canvas');
         const ctx = canvas.getContext('2d');
@@ -647,6 +649,59 @@
         }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+        
+        // Server node class (stationary, in center)
+        class ServerNode {
+            constructor() {
+                this.name = 'Server';
+                this.x = 0;
+                this.y = 0;
+                this.radius = 50;
+                this.color = '#ffd93d';
+                this.pulsePhase = 0;
+            }
+            
+            updatePosition(canvasWidth, canvasHeight) {
+                this.x = canvasWidth / 2;
+                this.y = canvasHeight / 2;
+            }
+            
+            draw(ctx) {
+                // Pulsing glow effect
+                const pulse = Math.sin(this.pulsePhase) * 0.3 + 0.7;
+                ctx.shadowBlur = 25 * pulse;
+                ctx.shadowColor = this.color;
+                
+                // Outer circle
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color + '20';
+                ctx.fill();
+                
+                // Middle circle
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius - 12, 0, Math.PI * 2);
+                ctx.fillStyle = this.color + '40';
+                ctx.fill();
+                
+                // Core
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius - 25, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                
+                ctx.shadowBlur = 0;
+                
+                // Label
+                ctx.fillStyle = '#0a0e27';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.name, this.x, this.y);
+                
+                this.pulsePhase += 0.05;
+            }
+        }
         
         // Client node class
         class ClientNode {
@@ -714,27 +769,63 @@
             }
         }
         
-        // Particle for message animation
+        // Particle for message/packet animation
         class Particle {
-            constructor(fromNode, toNode, color) {
+            constructor(fromNode, toNode, color, viaServer = false, delay = 0) {
                 this.from = fromNode;
                 this.to = toNode;
+                this.viaServer = viaServer;
                 this.progress = 0;
-                this.speed = 0.02;
+                this.phase = 0; // 0 = client->server, 1 = server->client
+                this.speed = 0.025; // Faster per hop
                 this.color = color;
-                this.size = 5;
+                this.size = 6;
+                this.delay = delay;
+                this.delayTimer = delay;
             }
             
             update() {
+                if (this.delayTimer > 0) {
+                    this.delayTimer -= 16; // Assuming 60fps
+                    return false;
+                }
+                
                 this.progress += this.speed;
+                
+                if (this.viaServer && this.progress >= 1 && this.phase === 0) {
+                    // Switch to second phase (server -> destination)
+                    this.phase = 1;
+                    this.progress = 0;
+                    return false;
+                }
+                
                 return this.progress >= 1;
             }
             
             draw(ctx) {
-                const x = this.from.x + (this.to.x - this.from.x) * this.progress;
-                const y = this.from.y + (this.to.y - this.from.y) * this.progress;
+                if (this.delayTimer > 0) return;
                 
-                ctx.shadowBlur = 15;
+                let startNode, endNode;
+                if (this.viaServer) {
+                    if (this.phase === 0) {
+                        // Phase 0: client -> server
+                        startNode = this.from;
+                        endNode = serverNode;
+                    } else {
+                        // Phase 1: server -> client
+                        startNode = serverNode;
+                        endNode = this.to;
+                    }
+                } else {
+                    startNode = this.from;
+                    endNode = this.to;
+                }
+                
+                const x = startNode.x + (endNode.x - startNode.x) * this.progress;
+                const y = startNode.y + (endNode.y - startNode.y) * this.progress;
+                
+                // Enhanced glow effect
+                ctx.shadowBlur = 20;
                 ctx.shadowColor = this.color;
                 ctx.beginPath();
                 ctx.arc(x, y, this.size, 0, Math.PI * 2);
@@ -742,39 +833,51 @@
                 ctx.fill();
                 ctx.shadowBlur = 0;
                 
-                // Trail
-                const trailLength = 20;
+                // Longer, more visible trail
+                const trailLength = 30;
                 for (let i = 1; i < trailLength; i++) {
                     const t = Math.max(0, this.progress - i * 0.01);
-                    const tx = this.from.x + (this.to.x - this.from.x) * t;
-                    const ty = this.from.y + (this.to.y - this.from.y) * t;
-                    const alpha = (1 - i / trailLength) * 0.5;
+                    const tx = startNode.x + (endNode.x - startNode.x) * t;
+                    const ty = startNode.y + (endNode.y - startNode.y) * t;
+                    const alpha = (1 - i / trailLength) * 0.6;
                     
                     ctx.beginPath();
-                    ctx.arc(tx, ty, this.size * (1 - i / trailLength), 0, Math.PI * 2);
+                    ctx.arc(tx, ty, this.size * (1 - i / trailLength * 0.7), 0, Math.PI * 2);
                     ctx.fillStyle = this.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
                     ctx.fill();
                 }
             }
         }
         
+        // State management (initialized after class definitions)
+        const clients = new Map();
+        const particles = [];
+        const serverNode = new ServerNode();
+        let serverConnected = false;
+        const clientsWithProcessId = new Map(); // Store client metadata including processId
+        
         // Animation loop
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            // Draw connections between clients
-            const clientArray = Array.from(clients.values());
-            ctx.strokeStyle = '#2d3561';
-            ctx.lineWidth = 1;
-            for (let i = 0; i < clientArray.length; i++) {
-                for (let j = i + 1; j < clientArray.length; j++) {
-                    if (clientArray[i].mode === clientArray[j].mode) {
-                        ctx.beginPath();
-                        ctx.moveTo(clientArray[i].x, clientArray[i].y);
-                        ctx.lineTo(clientArray[j].x, clientArray[j].y);
-                        ctx.stroke();
-                    }
-                }
+            // Update server position (in case canvas resized)
+            serverNode.updatePosition(canvas.width, canvas.height);
+            
+            // Only draw server and connections if server is connected
+            if (serverConnected) {
+                // Draw connections from all clients to server
+                const clientArray = Array.from(clients.values());
+                ctx.strokeStyle = '#2d3561';
+                ctx.lineWidth = 1;
+                clientArray.forEach(client => {
+                    ctx.beginPath();
+                    ctx.moveTo(client.x, client.y);
+                    ctx.lineTo(serverNode.x, serverNode.y);
+                    ctx.stroke();
+                });
+                
+                // Draw server node (behind particles)
+                serverNode.draw(ctx);
             }
             
             // Update and draw clients
@@ -799,13 +902,20 @@
         // WebSocket event handlers
         ws.onopen = () => {
             console.log('Connected to server');
+            serverConnected = true;
             addEvent('System', 'Connected to visualization server', 'EVENT');
+            
+            // Request current server state
+            ws.send(JSON.stringify({ command: 'get_state' }));
         };
         
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
             switch(data.type) {
+                case 'STATE_SYNC':
+                    handleStateSync(data);
+                    break;
                 case 'EVENT':
                     handleEvent(data);
                     break;
@@ -826,6 +936,41 @@
                     break;
             }
         };
+        
+        function handleStateSync(data) {
+            console.log('Received state sync:', data);
+            
+            // Restore connected TCP clients (network nodes)
+            if (data.clients && data.clients.length > 0) {
+                data.clients.forEach(client => {
+                    if (!clients.has(client.name)) {
+                        clients.set(client.name, new ClientNode(client.name, client.mode));
+                    }
+                    // Store metadata for kill functionality
+                    clientsWithProcessId.set(client.name, {
+                        id: client.id,
+                        processId: client.processId
+                    });
+                });
+                updateClientsList();
+                addEvent('System', `Restored ${data.clients.length} connected client(s)`, 'EVENT');
+            }
+            
+            // Restore running client processes (for terminals)
+            if (data.processes && data.processes.length > 0) {
+                data.processes.forEach(proc => {
+                    if (!terminals.has(proc.processId)) {
+                        terminals.set(proc.processId, {
+                            name: proc.name,
+                            mode: proc.mode,
+                            lines: [`--- Connected to ${proc.name} (PID: ${proc.pid}) ---`]
+                        });
+                    }
+                });
+                updateTerminalDropdowns();
+                addEvent('System', `Restored ${data.processes.length} process terminal(s)`, 'EVENT');
+            }
+        }
         
         function handleEvent(data) {
             // Parse client connection/disconnection
@@ -857,8 +1002,33 @@
                 updateClientsList();
             }
             
+            // Store client metadata for kill functionality
+            if (data.clientId !== undefined) {
+                clientsWithProcessId.set(clientName, {
+                    id: data.clientId,
+                    processId: data.processId
+                });
+                // Update the client list to show/hide kill button
+                updateClientsList();
+            }
+            
             const keyPreview = data.hex.substring(0, 16) + '...';
             addEvent(clientName, `Published ${mode} public key: ${keyPreview}`, 'type-pubkey');
+            
+            // Create particles to visualize public key distribution through server
+            const fromNode = clients.get(clientName);
+            if (fromNode) {
+                const color = mode === 'ECC' ? '#00d4ff' : '#b968ff';
+                let delayOffset = 0;
+                
+                clients.forEach((toNode, name) => {
+                    if (name !== clientName && toNode.mode === fromNode.mode) {
+                        // Two-hop routing: client -> server -> other client
+                        particles.push(new Particle(fromNode, toNode, color, true, delayOffset));
+                        delayOffset += 100; // Stagger arrivals slightly
+                    }
+                });
+            }
         }
         
         function handleMessage(data) {
@@ -866,12 +1036,15 @@
             const msgPreview = data.hex.substring(0, 24) + '...';
             addEvent(clientName, `Sent encrypted message: ${msgPreview}`, 'type-msg');
             
-            // Create particles to all other clients
+            // Create particles to all other clients through server (green for messages)
             const fromNode = clients.get(clientName);
             if (fromNode) {
+                let delayOffset = 0;
                 clients.forEach((toNode, name) => {
                     if (name !== clientName && toNode.mode === fromNode.mode) {
-                        particles.push(new Particle(fromNode, toNode, '#00ff88'));
+                        // Two-hop routing: client -> server -> other client
+                        particles.push(new Particle(fromNode, toNode, '#00ff88', true, delayOffset));
+                        delayOffset += 100;
                     }
                 });
             }
@@ -882,12 +1055,15 @@
             const capsulePreview = data.hex.substring(0, 16) + '...';
             addEvent(clientName, `Sent Kyber encapsulation: ${capsulePreview}`, 'type-kyber');
             
-            // Create particle animation
+            // Create particle animation through server (purple for Kyber capsules)
             const fromNode = clients.get(clientName);
             if (fromNode) {
+                let delayOffset = 0;
                 clients.forEach((toNode, name) => {
                     if (name !== clientName && toNode.mode === 'KYBER') {
-                        particles.push(new Particle(fromNode, toNode, '#b968ff'));
+                        // Two-hop routing: client -> server -> other client
+                        particles.push(new Particle(fromNode, toNode, '#b968ff', true, delayOffset));
+                        delayOffset += 100;
                     }
                 });
             }
@@ -916,6 +1092,14 @@
             clients.forEach((node, name) => {
                 const card = document.createElement('div');
                 card.className = 'client-card';
+                
+                // Check if this client has a process ID (can be killed)
+                const clientData = Array.from(clientsWithProcessId.entries()).find(([n, d]) => n === name);
+                const hasProcess = clientData && clientData[1].processId !== undefined && clientData[1].processId !== null;
+                
+                const killButton = hasProcess ? 
+                    `<button class="client-btn danger" onclick="killClient(${clientData[1].id})" title="Terminate Process">Kill</button>` : '';
+                
                 card.innerHTML = `
                     <div class="client-header">
                         <div class="client-name">${name}</div>
@@ -925,6 +1109,7 @@
                         Status: Active<br>
                         Connected: Just now
                     </div>
+                    ${killButton ? `<div class="client-actions">${killButton}</div>` : ''}
                 `;
                 clientsList.appendChild(card);
             });
@@ -957,6 +1142,7 @@
         
         ws.onclose = () => {
             console.log('Disconnected from server');
+            serverConnected = false;
             document.querySelector('.status-dot').style.background = 'var(--accent-red)';
             document.querySelector('.status').innerHTML = '<div class="status-dot"></div>Server Disconnected';
         };
@@ -973,6 +1159,24 @@
                 }));
                 
                 addEvent('System', `Launching ${mode} client...`, 'EVENT');
+            } else {
+                alert('Not connected to server!');
+            }
+        }
+        
+        function killClient(clientId) {
+            if (!confirm('Are you sure you want to kill this client process?')) {
+                return;
+            }
+            
+            console.log(`Killing client ${clientId}...`);
+            
+            // Send command via WebSocket
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    command: 'kill_client',
+                    clientId: clientId
+                }));
             } else {
                 alert('Not connected to server!');
             }
@@ -1026,12 +1230,24 @@
                 const terminal = terminals.get(processId);
                 terminal.lines.push(`--- Client ${name} disconnected ---`);
                 
-                // Update any slot showing this terminal
+                // Update any slot showing this terminal before removal
                 terminalAssignments.forEach((assignedId, slot) => {
                     if (assignedId === processId) {
                         updateTerminalDisplay(slot);
+                        // Clear the assignment after a brief delay to show the disconnect message
+                        setTimeout(() => {
+                            terminalAssignments[slot] = null;
+                            document.getElementById(`terminal-select-${slot + 1}`).value = '';
+                            updateTerminalDisplay(slot);
+                        }, 1000);
                     }
                 });
+                
+                // Remove terminal after delay
+                setTimeout(() => {
+                    terminals.delete(processId);
+                    updateTerminalDropdowns();
+                }, 1500);
             }
         }
         
@@ -1139,11 +1355,6 @@
         
         // Start animation loop
         animate();
-    </script>
-</body>
-</html>
-            }
-        }
     </script>
 </body>
 </html>
