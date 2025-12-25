@@ -1127,11 +1127,11 @@ def test_kyber():
     print()
     
     if alice_shared_secret == bob_shared_secret:
-        print("✓ SUCCESS! Both parties have the same shared secret.")
+        print(" SUCCESS! Both parties have the same shared secret.")
         print("  Fujisaki-Okamoto transform ensures CCA security.")
         print("  They can now use this to encrypt communications.")
     else:
-        print("✗ ERROR: Shared secrets don't match!")
+        print(" ERROR: Shared secrets don't match!")
 
 
 if __name__ == "__main__":
