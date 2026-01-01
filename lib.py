@@ -40,15 +40,49 @@ _lib = _load_native_lib()
 
 # Define C function signatures for Polynomial Arithmetic
 _lib.lib_version.restype = ctypes.c_char_p
+_lib.has_avx2.restype = ctypes.c_int
+_lib.has_sse2.restype = ctypes.c_int
 _lib.ntt_transform.argtypes = [ctypes.POINTER(ctypes.c_int16)]
 _lib.ntt_inverse.argtypes = [ctypes.POINTER(ctypes.c_int16)]
 _lib.poly_add.argtypes = [ctypes.POINTER(ctypes.c_int16)] * 3
 _lib.poly_sub.argtypes = [ctypes.POINTER(ctypes.c_int16)] * 3
 _lib.poly_mul_ntt.argtypes = [ctypes.POINTER(ctypes.c_int16)] * 3
 
+# New SIMD-accelerated functions
+_lib.compress_poly.argtypes = [ctypes.POINTER(ctypes.c_int16), ctypes.c_int]
+_lib.decompress_poly.argtypes = [ctypes.POINTER(ctypes.c_int16), ctypes.c_int]
+_lib.centered_binomial_distribution.argtypes = [ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
+_lib.reduce_coefficients.argtypes = [ctypes.POINTER(ctypes.c_int16)]
+_lib.parse_poly_uniform.argtypes = [ctypes.POINTER(ctypes.c_int16), ctypes.POINTER(ctypes.c_uint8), ctypes.c_int]
+_lib.parse_poly_uniform.restype = ctypes.c_int
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
+
+def get_simd_info():
+    """Check which SIMD optimizations are enabled in the compiled library."""
+    version = _lib.lib_version().decode('utf-8')
+    avx2 = bool(_lib.has_avx2())
+    sse2 = bool(_lib.has_sse2())
+    
+    info = {
+        'version': version,
+        'avx2': avx2,
+        'sse2': sse2,
+        'simd_enabled': avx2 or sse2
+    }
+    return info
+
+def print_simd_info():
+    """Print SIMD optimization status."""
+    info = get_simd_info()
+    print(f"Library: {info['version']}")
+    print(f"AVX2: {'[OK] Enabled' if info['avx2'] else '✗ Disabled'}")
+    print(f"SSE2: {'[OK] Enabled' if info['sse2'] else '✗ Disabled'}")
+    if not info['simd_enabled']:
+        print("[WARN] Warning: No SIMD optimizations enabled!")
+        print("  Recompile with /arch:AVX2 (MSVC) or -mavx2 (GCC/Clang)")
 
 def bit_count(x: int) -> int:
     """Count the number of bits in x."""
@@ -436,9 +470,15 @@ class PolynomialVector:
         return self
     
     def reduce_coefficients(self):
-        """Reduce all coefficients mod q."""
+        """Reduce all coefficients mod q (C-Accelerated)."""
         for p in self.polys:
-            p.coeffs = p.coeffs % p.q
+            coeffs_copy = p.coeffs.copy()
+            if not coeffs_copy.flags['C_CONTIGUOUS']:
+                coeffs_copy = np.ascontiguousarray(coeffs_copy)
+            
+            coeffs_array = coeffs_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
+            _lib.reduce_coefficients(coeffs_array)
+            p.coeffs = coeffs_copy
         return self
     
     def to_bytes(self, d: int = 12) -> bytes:
@@ -485,50 +525,41 @@ class PolynomialMatrix:
 # ============================================================================
 
 def compress_poly(poly: Polynomial, d: int) -> Polynomial:
-    """Compress polynomial coefficients from q bits to d bits."""
-    q = poly.q
-    compressed_coeffs = np.zeros(256, dtype=np.int16)
+    """Compress polynomial coefficients from q bits to d bits (C-Accelerated)."""
+    coeffs_copy = poly.coeffs.copy()
+    if not coeffs_copy.flags['C_CONTIGUOUS']:
+        coeffs_copy = np.ascontiguousarray(coeffs_copy)
     
-    # Use int32 for calculation to avoid overflow before modulo
-    c_i32 = poly.coeffs.astype(np.int32)
-    t = 1 << d
-    for i in range(256):
-        # Round((2^d / q) * x) % 2^d
-        val = ((t * c_i32[i] + 1664) // q) % t
-        compressed_coeffs[i] = val
+    coeffs_array = coeffs_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
+    _lib.compress_poly(coeffs_array, d)
     
-    poly.coeffs = compressed_coeffs
+    poly.coeffs = coeffs_copy
     return poly
 
 def decompress_poly(poly: Polynomial, d: int, q: int = 3329) -> Polynomial:
-    """Decompress polynomial coefficients from d bits back to q."""
-    decompressed_coeffs = np.zeros(256, dtype=np.int16)
-    t = 1 << (d - 1)
+    """Decompress polynomial coefficients from d bits back to q (C-Accelerated)."""
+    coeffs_copy = poly.coeffs.copy()
+    if not coeffs_copy.flags['C_CONTIGUOUS']:
+        coeffs_copy = np.ascontiguousarray(coeffs_copy)
     
-    c_i32 = poly.coeffs.astype(np.int32)
-    num_coeffs = min(len(poly.coeffs), 256)
-    for i in range(num_coeffs):
-        # Round((q / 2^d) * x)
-        val = ((q * c_i32[i] + t) >> d) % q
-        decompressed_coeffs[i] = val
+    coeffs_array = coeffs_copy.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
+    _lib.decompress_poly(coeffs_array, d)
     
-    poly.coeffs = decompressed_coeffs
+    poly.coeffs = coeffs_copy
     return poly
 
 def centered_binomial_distribution(eta: int, random_bytes: bytes) -> Polynomial:
-    """Sample polynomial with coefficients from CBD."""
+    """Sample polynomial with coefficients from CBD (C-Accelerated with SIMD)."""
     assert 64 * eta == len(random_bytes)
-    coeffs = np.zeros(256, dtype=np.int16)
-    b_int = int.from_bytes(random_bytes, "little")
-    mask = (1 << eta) - 1
-    mask2 = (1 << 2 * eta) - 1
     
-    for i in range(256):
-        x = b_int & mask2
-        a = bit_count(x & mask)
-        b = bit_count((x >> eta) & mask)
-        b_int >>= 2 * eta
-        coeffs[i] = (a - b) % 3329
+    coeffs = np.zeros(256, dtype=np.int16)
+    coeffs_array = coeffs.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
+    
+    # Convert bytes to uint8 array for C
+    random_array = np.frombuffer(random_bytes, dtype=np.uint8)
+    random_ptr = random_array.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+    
+    _lib.centered_binomial_distribution(coeffs_array, random_ptr, eta)
     
     return Polynomial(coeffs, q=3329)
 
@@ -543,22 +574,33 @@ def sample_noise_vector(k: int, eta: int, seed: bytes, nonce: int) -> Tuple[Poly
     return PolynomialVector(polys), nonce + k
 
 def parse_polynomial_from_hash(hash_output: bytes, q: int = 3329, is_ntt: bool = True) -> Polynomial:
-    """Parse polynomial with uniform random coefficients from hash output."""
-    i, j = 0, 0
+    """Parse polynomial with uniform random coefficients from hash output (C-Accelerated)."""
     coeffs = np.zeros(256, dtype=np.int16)
+    coeffs_array = coeffs.ctypes.data_as(ctypes.POINTER(ctypes.c_int16))
     
-    while j < 256 and i + 2 < len(hash_output):
-        d1 = hash_output[i] + 256 * (hash_output[i + 1] % 16)
-        d2 = (hash_output[i + 1] // 16) + 16 * hash_output[i + 2]
-        i += 3
+    hash_array = np.frombuffer(hash_output, dtype=np.uint8)
+    hash_ptr = hash_array.ctypes.data_as(ctypes.POINTER(ctypes.c_uint8))
+    
+    num_parsed = _lib.parse_poly_uniform(coeffs_array, hash_ptr, len(hash_output))
+    
+    # If we didn't parse enough coefficients, fall back to Python (shouldn't happen with 840 bytes)
+    if num_parsed < 256:
+        # Fallback to original Python implementation
+        i, j = 0, 0
+        coeffs = np.zeros(256, dtype=np.int16)
         
-        if d1 < q:
-            coeffs[j] = d1
-            j += 1
-        
-        if d2 < q and j < 256:
-            coeffs[j] = d2
-            j += 1
+        while j < 256 and i + 2 < len(hash_output):
+            d1 = hash_output[i] + 256 * (hash_output[i + 1] % 16)
+            d2 = (hash_output[i + 1] // 16) + 16 * hash_output[i + 2]
+            i += 3
+            
+            if d1 < q:
+                coeffs[j] = d1
+                j += 1
+            
+            if d2 < q and j < 256:
+                coeffs[j] = d2
+                j += 1
     
     return Polynomial(coeffs, q, is_ntt)
 

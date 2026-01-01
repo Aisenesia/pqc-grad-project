@@ -7,6 +7,7 @@ This separation is designed to maximize performance, particularly for the Kyber 
 To build the C library (`lib.dll`), ensure you have Visual Studio 2022 installed with C++ development tools and compute capabilities. Then, open a Developer Command Prompt and run:
 
 	cl /LD /O2 /W3 lib.c /link /OUT:lib.dll
+	cl /LD /O2 /W3 /arch:AVX2 lib.c /link /OUT:lib.dll
 
 This command compiles `lib.c` into a dynamic link library (`lib.dll`) with optimizations enabled. Once compiled, the DLL can be used directly by the Python application via the provided interface in `lib.py`.
 
