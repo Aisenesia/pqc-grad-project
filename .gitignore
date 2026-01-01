@@ -1,2 +1,7 @@
 __pycache__/
 *.png
+*.dll
+*.exp
+*.lib
+*.pdb
+*.obj
