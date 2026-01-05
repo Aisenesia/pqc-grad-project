@@ -1,0 +1,17 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+%% Edit below this line
+With the rapid advancement of quantum computing, traditional cryptographic systems such as RSA and Elliptic Curve Cryptography (ECC) face potential vulnerabilities. This project explores the theory and implementation of post-quantum cryptography, specifically focusing on CRYSTALS-Kyber, a lattice-based Key Encapsulation Mechanism (KEM) selected by NIST for standardization.
+
+The project begins with a comprehensive study of cryptographic handshake protocols and classical ECC, followed by an in-depth analysis of Kyber's mathematical foundation based on the Module Learning With Errors (Module-LWE) problem. To demonstrate our understanding, we implemented a complete cryptographic system featuring both ECC and Kyber algorithms with a client-server architecture for secure key exchange.
+
+The implementation includes SIMD-optimized C code leveraging AVX2 instructions for polynomial arithmetic operations, interfaced with Python for application-level functionality. Performance benchmarks demonstrate that with proper optimization, Kyber-512 achieves superior speed compared to ECC while providing quantum resistance. The project includes a web-based dashboard for real-time visualization of the handshake process and performance metrics.
+
+This work serves as both a theoretical exploration and practical demonstration of post-quantum cryptography readiness for real-world deployment.
+
+%% Until here
+\vfill
+%% Edit after {Keywords:}
+\textbf{Keywords:} Post-Quantum Cryptography, CRYSTALS-Kyber, Elliptic Curve Cryptography, Module-LWE, Key Encapsulation Mechanism, SIMD Optimization.
+\clearpage

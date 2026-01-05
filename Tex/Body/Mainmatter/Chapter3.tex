@@ -1,0 +1,171 @@
+\chapter{Implementation}
+
+\section{System Architecture}
+
+The project is structured as a cryptographic library with client-server demonstration components. The architecture consists of several key components:
+
+\subsection{Core Cryptographic Library}
+
+The cryptographic library is split into two complementary implementations:
+
+\begin{itemize}
+\item \textbf{Python Implementation (lib.py):} A pure Python implementation providing clarity and portability. This serves as the reference implementation and handles high-level algorithm logic, data marshaling, and application interface.
+
+\item \textbf{C Implementation (lib.c):} A high-performance native library implementing computationally intensive operations, particularly polynomial arithmetic for Kyber. The C code is compiled to a DLL/shared library and interfaced via Python's ctypes.
+\end{itemize}
+
+This hybrid approach allows us to maintain code clarity while achieving optimal performance for critical operations.
+
+\subsection{Client-Server Architecture}
+
+To demonstrate practical key exchange, we implemented a client-server system with the following components:
+
+\begin{itemize}
+\item \textbf{Server (server.py):} Manages multiple client connections, handles both TCP for crypto clients and WebSocket for dashboard connections, coordinates key exchanges between clients, and provides real-time metrics.
+
+\item \textbf{Client (client.py):} Implements both ECC and Kyber handshake protocols, provides interactive console interface, and sends performance metrics to the server for visualization.
+
+\item \textbf{Web Dashboard:} Real-time visualization of handshake processes, performance graphs, and system status using HTML5 and JavaScript.
+\end{itemize}
+
+\section{Algorithm Implementations}
+
+\subsection{Elliptic Curve Operations}
+
+The ECC implementation includes:
+
+\begin{itemize}
+\item Point addition and doubling on the secp256k1 curve
+\item Scalar multiplication using the double-and-add algorithm
+\item Modular arithmetic optimized for the curve's prime field
+\item Key generation and ECDH shared secret computation
+\end{itemize}
+
+The implementation ensures constant-time operations where possible to mitigate timing attacks.
+
+\subsection{Kyber Implementation}
+
+The Kyber implementation follows the official NIST specification and includes:
+
+\textbf{Polynomial Arithmetic:}
+\begin{itemize}
+\item Number Theoretic Transform (NTT) for fast multiplication
+\item Modular reduction using Barrett reduction
+\item Polynomial addition and subtraction in $R_q$
+\end{itemize}
+
+\textbf{Sampling Functions:}
+\begin{itemize}
+\item Centered Binomial Distribution (CBD) for error sampling
+\item Uniform sampling from extended output functions
+\item Proper use of cryptographic hash functions (SHAKE, SHA3)
+\end{itemize}
+
+\textbf{Core Protocol Functions:}
+\begin{itemize}
+\item Key generation (KeyGen)
+\item Encapsulation (Encaps)  
+\item Decapsulation (Decaps)
+\end{itemize}
+
+\section{SIMD Optimizations}
+
+One of the key contributions of this project is demonstrating the performance impact of SIMD optimizations for Kyber.
+
+\subsection{AVX2 Acceleration}
+
+The C implementation leverages AVX2 (Advanced Vector Extensions 2) instructions to parallelize operations:
+
+\begin{itemize}
+\item \textbf{Vectorized NTT:} Process multiple coefficients simultaneously using 256-bit vector operations
+\item \textbf{Parallel Reduction:} Apply modular reduction to vectors of coefficients
+\item \textbf{SIMD Polynomial Operations:} Vectorized addition, subtraction, and coefficient manipulation
+\end{itemize}
+
+The library automatically detects CPU capabilities at runtime and uses the best available instruction set.
+
+\subsection{Compilation for Optimization}
+
+The C library is compiled with aggressive optimizations:
+
+\begin{verbatim}
+cl /LD /O2 /W3 /arch:AVX2 lib.c /link /OUT:lib.dll
+\end{verbatim}
+
+This enables:
+\begin{itemize}
+\item AVX2 instruction generation
+\item Loop unrolling and vectorization
+\item Aggressive inlining of small functions
+\end{itemize}
+
+\section{Protocol Design}
+
+\subsection{Message Format}
+
+The client-server protocol uses a simple binary message format with headers indicating message type:
+
+\begin{itemize}
+\item \texttt{HEADER\_HANDSHAKE (0x01):} Initial key exchange message
+\item \texttt{HEADER\_MESSAGE (0x02):} Encrypted application data
+\item \texttt{HEADER\_SYSTEM (0x03):} Control messages
+\item \texttt{HEADER\_KYBER\_CAPSULE (0x04):} Kyber encapsulation ciphertext
+\end{itemize}
+
+Each message includes the header byte, message length, and payload data.
+
+\subsection{ECC Handshake Protocol}
+
+For ECC-based key exchange:
+
+\begin{enumerate}
+\item Client generates ephemeral key pair and sends public key to server
+\item Server receives client's public key
+\item Server generates its own key pair and computes shared secret
+\item Server sends its public key to client
+\item Client computes shared secret
+\item Both derive AES encryption key from shared secret using key derivation
+\end{enumerate}
+
+\subsection{Kyber Handshake Protocol}
+
+For Kyber-based key exchange:
+
+\begin{enumerate}
+\item Client generates Kyber key pair and sends public key to server
+\item Server receives client's public key
+\item Server performs encapsulation, producing ciphertext and shared secret
+\item Server sends ciphertext to client
+\item Client decapsulates ciphertext to recover shared secret
+\item Both derive AES encryption key from shared secret
+\end{enumerate}
+
+\section{Visualization Dashboard}
+
+The web-based dashboard provides real-time monitoring of:
+
+\begin{itemize}
+\item Active client connections
+\item Currently selected cryptographic mode (ECC or Kyber)
+\item Key exchange status and timing
+\item Performance graphs comparing algorithm execution times
+\item Message throughput and encryption status
+\end{itemize}
+
+The dashboard connects to the server via WebSocket, receiving JSON-formatted status updates and metrics. This allows users to observe the cryptographic handshake process in real-time and understand the performance characteristics of different algorithms.
+
+\section{Code Structure}
+
+The implementation is organized into several Python modules:
+
+\begin{itemize}
+\item \textbf{lib.py:} Core cryptographic library (792 lines)
+\item \textbf{lib.c:} Native C implementation for performance
+\item \textbf{client.py:} Client application with interactive interface (378 lines)
+\item \textbf{server.py:} Server managing connections and coordination (666 lines)
+\item \textbf{performance\_comparison.py:} Benchmarking utilities
+\item \textbf{breaker.py:} Stress testing and security analysis tools
+\end{itemize}
+
+The modular structure allows independent testing and development of each component while maintaining clean interfaces between layers.
+ 

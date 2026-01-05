@@ -1,0 +1,65 @@
+\chapter{Introduction}
+
+\section{Background and Motivation}
+
+The security of modern digital communications relies heavily on cryptographic algorithms that are based on mathematical problems considered computationally intractable for classical computers. Public-key cryptography systems such as RSA (Rivest-Shamir-Adleman) and Elliptic Curve Cryptography (ECC) have been the backbone of secure internet communications for decades, protecting everything from web browsing to financial transactions.
+
+However, the emergence of quantum computing poses an existential threat to these cryptographic foundations. In 1994, Peter Shor developed a quantum algorithm capable of efficiently solving both the integer factorization problem and the discrete logarithm problem—the very mathematical assumptions underlying RSA and ECC \cite{Nielsen2010}. While large-scale quantum computers do not yet exist, rapid progress in quantum hardware development has made the threat increasingly tangible.
+
+In response to this challenge, the cryptographic community has been developing post-quantum cryptography (PQC)—cryptographic algorithms designed to be secure against both classical and quantum computers. In 2016, the National Institute of Standards and Technology (NIST) initiated a standardization process to identify and standardize post-quantum cryptographic algorithms \cite{NIST-PQC}. After multiple rounds of evaluation, CRYSTALS-Kyber was selected in 2022 as the primary algorithm for public-key encryption and key establishment.
+
+\section{Project Objectives}
+
+The primary objectives of this graduation project are:
+
+\begin{enumerate}
+\item \textbf{Theoretical Understanding:} To gain comprehensive knowledge of cryptographic handshake protocols, classical public-key cryptography (specifically ECC), and post-quantum cryptography (focusing on CRYSTALS-Kyber).
+
+\item \textbf{Mathematical Foundation:} To understand the mathematical underpinnings of both classical and post-quantum cryptographic systems, including elliptic curve operations and lattice-based cryptography fundamentals.
+
+\item \textbf{Implementation:} To develop a working demonstration system that implements both ECC and Kyber-based key exchange mechanisms with proper client-server architecture.
+
+\item \textbf{Performance Optimization:} To explore and implement SIMD (Single Instruction Multiple Data) optimizations using AVX2 instructions for accelerating Kyber's polynomial arithmetic operations.
+
+\item \textbf{Comparative Analysis:} To benchmark and compare the performance characteristics of classical ECC versus post-quantum Kyber under different implementation strategies.
+
+\item \textbf{Practical Demonstration:} To create an interactive visualization system demonstrating real-time cryptographic handshakes and their performance metrics.
+\end{enumerate}
+
+\section{Scope and Methodology}
+
+This project encompasses three main phases:
+
+\subsection{Research Phase}
+We conducted extensive research into cryptographic theory, studying foundational texts and recent academic papers on both classical and post-quantum cryptography. Key topics included:
+\begin{itemize}
+\item Public-key cryptography fundamentals
+\item Elliptic curve mathematics and the secp256k1 curve
+\item Lattice-based cryptography and the Learning With Errors (LWE) problem
+\item Module-LWE and the Kyber algorithm specification
+\item NIST post-quantum standardization process
+\end{itemize}
+
+\subsection{Implementation Phase}
+The implementation phase involved developing a complete cryptographic library featuring:
+\begin{itemize}
+\item Pure Python implementations for algorithm clarity and verification
+\item Optimized C implementations with SIMD acceleration for performance
+\item Client-server architecture for demonstrating key exchange
+\item Proper protocol design for handshake mechanisms
+\end{itemize}
+
+\subsection{Evaluation Phase}
+The final phase focused on testing, benchmarking, and creating visualization tools to demonstrate and compare the implemented algorithms.
+
+\section{Report Organization}
+
+The remainder of this report is organized as follows:
+
+\textbf{Chapter 2} provides the theoretical background, covering cryptographic handshake protocols, elliptic curve cryptography, and the mathematical foundations of CRYSTALS-Kyber.
+
+\textbf{Chapter 3} describes the implementation details, including system architecture, algorithm implementations, SIMD optimizations, and the client-server protocol design.
+
+\textbf{Chapter 4} presents performance analysis and comparative benchmarks between ECC and Kyber implementations.
+
+\textbf{Chapter 5} concludes the report with a summary of findings, contributions, and future work.

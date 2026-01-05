@@ -1,0 +1,96 @@
+\chapter{Theoretical Background}
+
+\section{Cryptographic Handshake Protocols}
+
+A cryptographic handshake is a process by which two parties establish a shared secret over an insecure communication channel. This shared secret can then be used for symmetric encryption of subsequent communications. The security of modern internet protocols like TLS (Transport Layer Security) relies fundamentally on robust handshake mechanisms.
+
+\subsection{Key Exchange Fundamentals}
+
+The challenge of key exchange was famously solved by Diffie and Hellman in 1976, introducing the concept of public-key cryptography. In a typical key exchange protocol:
+
+\begin{enumerate}
+\item Each party generates a public-private key pair
+\item Public keys are exchanged over the insecure channel
+\item Each party uses their private key and the other's public key to derive a shared secret
+\item The shared secret is identical for both parties without ever being transmitted
+\end{enumerate}
+
+This process provides forward secrecy—even if long-term keys are later compromised, past session keys remain secure.
+
+\section{Elliptic Curve Cryptography}
+
+Elliptic Curve Cryptography (ECC) offers equivalent security to RSA with significantly smaller key sizes. The use of elliptic curves in cryptography was independently proposed by Miller \cite{Miller1985} and Koblitz \cite{Koblitz1987}. An elliptic curve over a finite field is defined by the equation:
+
+\[y^2 = x^3 + ax + b \pmod{p}\]
+
+where $p$ is a large prime number, and $a, b$ are curve parameters satisfying $4a^3 + 27b^2 \neq 0$.
+
+\subsection{The secp256k1 Curve}
+
+This project implements the secp256k1 curve, which is widely used in Bitcoin and other cryptocurrencies \cite{Koblitz1994}. The curve parameters are:
+\begin{itemize}
+\item Prime: $p = 2^{256} - 2^{32} - 977$
+\item Curve coefficients: $a = 0, b = 7$ (making the equation $y^2 = x^3 + 7$)
+\item Generator point $G$ with order $n$
+\end{itemize}
+
+\subsection{ECDH Key Exchange}
+
+Elliptic Curve Diffie-Hellman (ECDH) works as follows:
+
+\begin{enumerate}
+\item Alice generates private key $d_A$ (random integer) and computes public key $Q_A = d_A \cdot G$
+\item Bob generates private key $d_B$ and computes public key $Q_B = d_B \cdot G$  
+\item Alice and Bob exchange public keys
+\item Both compute the shared secret: $S = d_A \cdot Q_B = d_B \cdot Q_A = d_A d_B \cdot G$
+\end{enumerate}
+
+The security relies on the Elliptic Curve Discrete Logarithm Problem (ECDLP)—given $Q$ and $G$, it is computationally infeasible to find $d$ such that $Q = d \cdot G$.
+
+\section{Post-Quantum Cryptography: CRYSTALS-Kyber}
+
+CRYSTALS-Kyber is a Key Encapsulation Mechanism (KEM) based on the Module Learning With Errors (Module-LWE) problem, which is believed to be secure against quantum attacks \cite{Peikert2016}. Unlike traditional key exchange where both parties contribute to the shared secret, a KEM works asymmetrically:
+
+\begin{enumerate}
+\item The receiver generates a public-private key pair
+\item The sender uses the public key to encapsulate a random session key, producing a ciphertext
+\item The sender transmits the ciphertext
+\item The receiver decapsulates using their private key to recover the session key
+\end{enumerate}
+
+\subsection{Mathematical Foundation: Module-LWE}
+
+The security of Kyber is based on the hardness of the Module-LWE problem. Given a matrix $\mathbf{A}$ of polynomials and a vector $\mathbf{b} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where $\mathbf{s}$ is a secret and $\mathbf{e}$ is small error (noise), it is computationally hard to recover $\mathbf{s}$ even with a quantum computer.
+
+\subsection{Polynomial Rings}
+
+Kyber operates in the polynomial ring $R_q = \mathbb{Z}_q[X]/(X^{256} + 1)$, where:
+\begin{itemize}
+\item $q = 3329$ is the modulus
+\item Polynomials have degree at most 255
+\item Coefficients are reduced modulo $q$
+\item Multiplication is performed modulo $X^{256} + 1$
+\end{itemize}
+
+This ring structure allows efficient implementation using Number Theoretic Transform (NTT) for fast polynomial multiplication.
+
+\subsection{Key Generation, Encapsulation, and Decapsulation}
+
+The Kyber algorithm consists of three main operations:\footnote{Detailed specifications available in the official NIST submission documents}
+
+\textbf{Key Generation:} Generates a public key (matrix $\mathbf{A}$ and vector $\mathbf{t}$) and secret key (vector $\mathbf{s}$) using sampled small polynomials.
+
+\textbf{Encapsulation:} Takes a public key and random message, produces a ciphertext and shared secret using encryption under LWE.
+
+\textbf{Decapsulation:} Uses the secret key to decrypt the ciphertext and recover the shared secret.
+
+\section{Security Parameters and Variants}
+
+Kyber comes in three security levels:
+\begin{itemize}
+\item \textbf{Kyber-512:} Security comparable to AES-128 (128-bit security)
+\item \textbf{Kyber-768:} Security comparable to AES-192 (192-bit security)
+\item \textbf{Kyber-1024:} Security comparable to AES-256 (256-bit security)
+\end{itemize}
+
+This project implements Kyber-512 as it provides adequate security for most applications while offering better performance than higher security levels.
