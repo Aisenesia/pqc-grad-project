@@ -4,9 +4,6 @@ DONE:   2.1,
 DONE:   2.2
 EXPAND: 2.4.5. Biraz daha detaylı anlatılabilir
 EDIT:   3.1.1 sub For C implementation, express performance meausurability.
-DELETE: 3.2
-ADD:     3.2 ECC, detaylandırılmalı
-ADD:     3.3 KYBER, ntt, shake128, centered binomial dist gibi konular buranın alt başlığı olmalı
 EDIT:    3.4 Belki simd yanında, multithreadeddan bahsedilebilir, kyber emberrassingly parallel.
 EDIT:    3.6, kod satırlarına gerek yok, (daha generic olabilir mi bilemedim?), lib.py lib.cnin lib olduğuna dikkat çekmek mantıklı, lib.py içerisinde testler de var.
 EDIT:    4.2.1, Simd olmayan halleri tabloya eklenebilir (eklenirse yazının da değişmesi lazım), yüzdeler verilen sayılar vs kontrol edilmeli

@@ -28,9 +28,7 @@ To demonstrate practical key exchange, we implemented a client-server system wit
 \item \textbf{Web Dashboard:} Real-time visualization of handshake processes, performance graphs, and system status using HTML5 and JavaScript.
 \end{itemize}
 
-\section{Algorithm Implementations}
-
-\subsection{Elliptic Curve Operations}
+\section{ECC Implementation}
 
 The ECC implementation includes:
 
@@ -43,31 +41,66 @@ The ECC implementation includes:
 
 The implementation ensures constant-time operations where possible to mitigate timing attacks.
 
-\subsection{Kyber Implementation}
+\section{Kyber Implementation}
 
-The Kyber implementation follows the official NIST specification and includes:
+The Kyber implementation follows the official NIST specification and incorporates several key components that enable both security and efficiency. This section details the critical implementation aspects that make Kyber practical for real-world deployment.
 
-\textbf{Polynomial Arithmetic:}
+\subsection{Number Theoretic Transform (NTT)}
+
+The Number Theoretic Transform is fundamental to Kyber's efficiency, providing a fast method for polynomial multiplication in the ring $R_q = \mathbb{Z}_q[X]/(X^{256} + 1)$. Direct polynomial multiplication would require $O(n^2)$ coefficient operations, but NTT reduces this to $O(n \log n)$ complexity \cite{CLRS}.
+
+Kyber's parameters are specifically chosen to support NTT:
 \begin{itemize}
-\item Number Theoretic Transform (NTT) for fast multiplication
-\item Modular reduction using Barrett reduction
-\item Polynomial addition and subtraction in $R_q$
+    \item The modulus $q = 3329$ is prime and satisfies $q \equiv 1 \pmod{256}$.
+    \item Kyber uses an \textit{incomplete NTT}. Instead of splitting into linear factors, the polynomial $X^{256} + 1$ decomposes into 128 polynomials of degree 2 \cite{Kyber-Spec}.
+    \item The cyclotomic ring structure $X^{256} + 1$ allows negative-wrapped convolution suitable for this transform.
 \end{itemize}
 
-\textbf{Sampling Functions:}
+The NTT transforms polynomial multiplication in the coefficient domain into pointwise multiplication in the NTT domain. Our implementation performs most operations in the NTT domain to minimize expensive transform operations, converting back to coefficient representation only when necessary for encoding/decoding operations \cite{Kyber-Spec}.
+
+\subsection{Extendable Output Functions (XOF)}
+
+Kyber uses SHAKE-128, a member of the SHA-3 family, as an extendable output function (XOF) for generating pseudorandom data. Unlike traditional hash functions with fixed output length, XOFs can produce arbitrary-length outputs from a short seed.
+
+The primary application is generating the public matrix $\mathbf{A}$:
 \begin{itemize}
-\item Centered Binomial Distribution (CBD) for error sampling
-\item Uniform sampling from extended output functions
-\item Proper use of cryptographic hash functions (SHAKE, SHA3)
+    \item Instead of transmitting the entire matrix (requiring $k \times k \times 256$ coefficients, approximately 1.5 KB for Kyber-512), only a 32-byte seed is exchanged.
+    \item Both parties deterministically expand this seed using SHAKE-128 to reconstruct the identical matrix $\mathbf{A}$.
+    \item This reduces the matrix representation from $\approx$1536 bytes to 32 bytes, keeping the total public key size at 800 bytes \cite{Kyber-Spec}.
 \end{itemize}
 
-\textbf{Core Protocol Functions:}
+SHAKE functions are also used for hashing operations in the Fujisaki-Okamoto transform, which provides CCA security by binding ciphertexts to their randomness \cite{Kyber-Spec}.
+
+\subsection{Centered Binomial Distribution (CBD)}
+
+Cryptographic security in Kyber depends on sampling error terms from appropriate distributions. The Centered Binomial Distribution provides a discrete approximation to a Gaussian distribution while being efficiently implementable using only uniform random bits.
+
+To sample from $\text{CBD}_\eta$, we:
+\begin{enumerate}
+    \item Generate $2\eta$ uniform random bits.
+    \item Split them into two equal groups of $\eta$ bits.
+    \item Compute the difference between the Hamming weights: $\sum_{i=0}^{\eta-1} a_i - \sum_{i=0}^{\eta-1} b_i$.
+\end{enumerate}
+
+This produces values concentrated around zero with variance $\eta/2$. Kyber-512 uses $\eta_1 = 3$ for the secret key and $\eta_2 = 2$ for ciphertext errors. This distribution:
 \begin{itemize}
-\item Key generation (KeyGen)
-\item Encapsulation (Encaps)  
-\item Decapsulation (Decaps)
+    \item Provides sufficient entropy to ensure Module-LWE hardness.
+    \item Keeps errors small enough to guarantee correct decryption.
+    \item Requires no expensive floating-point operations or rejection sampling.
+    \item Can be efficiently implemented using bit operations and lookup tables \cite{Kyber-Spec}.
 \end{itemize}
 
+The balance between error magnitude and security is carefully calibrated—smaller errors would compromise security by making the LWE instance easier to solve, while larger errors would cause decryption failures.
+
+\subsection{Core Protocol Operations}
+
+The implementation provides three main cryptographic operations \cite{Kyber-Spec}:
+
+\textbf{Key Generation (KeyGen):} Generates secret key vector $\mathbf{s}$ and error vector $\mathbf{e}$ using CBD sampling, computes public key $\mathbf{t} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$ in NTT domain.
+
+\textbf{Encapsulation (Encaps):} Takes public key, samples fresh randomness and error terms, produces ciphertext $(\mathbf{u}, v)$ and shared secret via key derivation.
+
+\textbf{Decapsulation (Decaps):} Uses secret key to decrypt ciphertext, recovers message with error correction, derives shared secret, and performs implicit rejection for CCA security.
 \section{SIMD Optimizations}
 
 One of the key contributions of this project is demonstrating the performance impact of SIMD optimizations for Kyber.
