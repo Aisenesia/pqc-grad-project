@@ -125,13 +125,13 @@ This ring structure allows efficient implementation using Number Theoretic Trans
 
 \subsection{Key Generation, Encapsulation, and Decapsulation}
 
-The Kyber algorithm consists of three main operations:\footnote{Detailed specifications available in the official NIST submission documents}
+The Kyber algorithm implements a Key Encapsulation Mechanism (KEM) through three main operations. The security of these operations relies on the hardness of the Module-LWE problem, where small random errors obscure the underlying algebraic structure \cite{NIST-Selection}.
 
-\textbf{Key Generation:} Generates a public key (matrix $\mathbf{A}$ and vector $\mathbf{t}$) and secret key (vector $\mathbf{s}$) using sampled small polynomials.
+\textbf{Key Generation:} The receiver generates a key pair by first sampling a public random matrix $\mathbf{A} \in R_q^{k \times k}$ and a secret vector $\mathbf{s}$ with small coefficients. The secret vector $\mathbf{s}$ is chosen from a distribution with small values to ensure security while maintaining correctness. An error vector $\mathbf{e}$ with similarly small coefficients is also sampled. The public key is then computed as $\mathbf{t} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where the error term $\mathbf{e}$ provides the Module-LWE hardness. The public key consists of $(\mathbf{A}, \mathbf{t})$ while $\mathbf{s}$ remains the secret key.
 
-\textbf{Encapsulation:} Takes a public key and random message, produces a ciphertext and shared secret using encryption under LWE.
+\textbf{Encapsulation:} To establish a shared secret, the sender uses the receiver's public key $(\mathbf{A}, \mathbf{t})$ to encapsulate a randomly chosen message $m$. The sender samples their own secret vector $\mathbf{r}$ and error terms $\mathbf{e}_1, e_2$, all with small coefficients. The ciphertext is computed as $\mathbf{u} = \mathbf{A}^T \cdot \mathbf{r} + \mathbf{e}_1$ and $v = \mathbf{t}^T \cdot \mathbf{r} + e_2 + \text{Encode}(m)$, where $\text{Encode}$ maps the message to a suitable representation in the polynomial ring. The ciphertext $(\mathbf{u}, v)$ is sent to the receiver, and both parties derive the same shared secret from the message $m$ through a key derivation function.
 
-\textbf{Decapsulation:} Uses the secret key to decrypt the ciphertext and recover the shared secret.
+\textbf{Decapsulation:} The receiver uses their secret key $\mathbf{s}$ to recover the message by computing $m' = \text{Decode}(v - \mathbf{s}^T \cdot \mathbf{u})$. The subtraction $v - \mathbf{s}^T \cdot \mathbf{u}$ cancels out most terms, leaving primarily the encoded message plus small error terms. If the errors are sufficiently small (which the parameter selection ensures), the $\text{Decode}$ function correctly recovers $m$, allowing the receiver to derive the same shared secret \cite{Peikert2016}. The accumulated errors from key generation and encapsulation must remain below a threshold for correct decryption, which is guaranteed by Kyber's parameter choices with overwhelming probability.
 
 \section{Security Parameters and Variants}
 
