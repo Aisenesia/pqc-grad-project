@@ -137,42 +137,32 @@ Kyber-1024 & 3,136 & 47.5x \\ \hline
 
 However, in modern networks with high bandwidth availability, this overhead is manageable. For a single key exchange, even Kyber-1024's 3,136 bytes represents less than 0.003 seconds of transmission time on a 10 Mbps connection.
 
-\section{Real-World Implications}
+\section{Deployment Considerations}
 
-The benchmark results have significant implications for post-quantum cryptography deployment:
+The transition from classical algorithms to Post-Quantum Cryptography represents a fundamental shift in cryptographic infrastructure. Based on our experimental results, this section analyzes the expected operational changes and necessary adjustments for deploying Kyber in production environments.
 
-\subsection{Performance is Not a Barrier}
+\subsection{Latency and Throughput Trade-offs}
 
-Contrary to common assumptions, our results demonstrate that post-quantum cryptography can match or exceed the performance of classical algorithms. Kyber-512 completes a full key exchange cycle (key generation + encapsulation) in approximately 116 ms, compared to ECC's 208 ms—a 44\% improvement.
+Interestingly, data shows that post-quantum security does not necessarily come with a performance penalty. While Kyber introduces a significant increase in bandwidth usage (approximately 23x overhead for Kyber-512 relative to ECC), the reduction in computational cost offsets this transmission overhead in many scenarios.
 
-\subsection{Migration Path}
+Our results indicate that Kyber-512 reduces the computational latency of the handshake process by roughly 57\% compared to secp256k1. For high-bandwidth environments, this computational speedup results in a lower handshake time. However, in bandwidth-constrained environments (e.g., IoT/LoRaWAN), the transmission time for keys may become the bottleneck. Systems migrating to Kyber must therefore account for Maximum Transmission Unit (MTU) fragmentation, as Kyber keys and ciphertexts exceed the standard Ethernet MTU of 1500 bytes, potentially requiring packet fragmentation handling at the network layer \cite{Paquin2020}.
 
-Organizations can deploy Kyber without performance degradation:
-\begin{itemize}
-\item Kyber-512 is suitable for performance-critical applications requiring quantum resistance equivalent to AES-128 security
-\item Kyber-768 provides a balanced option with minimal performance overhead compared to ECC
-\item Kyber-1024 offers maximum security for highly sensitive applications where the 62\% performance overhead is acceptable
-\end{itemize}
+\subsection{Hybrid Implementation Strategies}
 
-\subsection{Hardware Requirements}
+Immediate replacement of classical algorithms with Kyber is generally not recommended due to the relative development of lattice-based cryptography compared to ECC. A hybrid deployment is the standard migration path endorsed by security bodies including NIST and BSI.
 
-The results emphasize the importance of modern CPU instruction sets. AVX2 support is critical for achieving competitive performance. Organizations planning post-quantum migration should:
-\begin{itemize}
-\item Verify AVX2 support on deployment hardware
-\item Consider ARM NEON optimizations for mobile/embedded platforms
-\item Evaluate GPU acceleration for high-throughput scenarios
-\end{itemize}
+In a hybrid scheme, the final shared secret is derived from both an ECC key exchange and a Kyber encapsulation:
+\[ K_{final} = \text{KDF}(K_{ECC} || K_{Kyber}) \]
+This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber's low computational footprint (approx. 44ms for KeyGen), adding it to an existing ECC handshake introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
 
-\subsection{Client-Server Demonstration}
+\subsection{Hardware Dependencies and Optimization Constraints}
 
-The client-server implementation successfully demonstrates both protocols in action. Key observations:
-\begin{itemize}
-\item Handshake latency is acceptable for both ECC and all Kyber variants
-\item Multiple concurrent connections can be handled efficiently
-\item The web dashboard provides clear real-time visualization of the cryptographic process
-\item Network bandwidth consumption remains manageable even for Kyber-1024
-\end{itemize}
+Our benchmarks revealed that Kyber's performance advantage is heavily dependent on specific instruction set architectures. The reported speedups (0.43x slowdown factor vs ECC) rely on the vectorization of polynomial operations in the Ring-$R_q$.
 
-\subsection{Distribution Analysis}
+The reliance on AVX2 instructions for the Number Theoretic Transform (NTT) implies that performance is consistent on modern x86-64 server hardware but may degrade significantly on legacy platforms or embedded architectures lacking SIMD support. Future research must focus on optimizing polynomial multiplication for scalar architectures to ensure consistent performance across diverse networks. This hardware dependency suggests that during the migration phase, server-side hardware capability adjustments are necessary for enabling Kyber \cite{Kyber-Spec,Botros2020}.
 
-The distribution of execution times shows consistent performance across runs, with Kyber-512 exhibiting lower variance than ECC in key generation operations. This predictability is beneficial for real-time systems with strict latency requirements.
+\subsection{Operational Stability and Statistical Consistency}
+
+To ensure the reliability of these performance claims, our experimental methodology prioritized statistical significance over single-run metrics. The reported results represent the mean of $N=1000$ iterations for each security level, minimizing the impact of background factors.
+
+The distribution analysis of these iterations indicates that Kyber-512 exhibits a lower standard deviation in execution time compared to ECC. This high degree of deterministic performance is attributed to the constant-time nature of the underlying lattice operations (matrix-vector multiplication and NTT), which lack the conditional branching often found in unoptimized ECC point multiplication. For real-time systems requiring predictable execution times, Kyber offers better operational stability.

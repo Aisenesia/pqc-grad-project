@@ -57,7 +57,7 @@ In 1994, Peter Shor developed a quantum algorithm that efficiently solves both i
 
 Though large-scale quantum computers do not yet exist, the "harvest now, decrypt later" threat—where adversaries collect encrypted data today to decrypt once quantum computers are available—demands immediate action to protect long-term sensitive data \cite{Mosca2018}.
 
-\subsection{Quantum Key Distribution: A Limited Alternative}
+\subsection{Quantum Key Distribution}
 
 Quantum Key Distribution (QKD) offers information-theoretic security by using quantum mechanics principles to detect eavesdropping during key exchange \cite{Bennett1984}. However, QKD faces critical practical limitations: it requires expensive specialized hardware, is limited to distances under 200 kilometers, provides only point-to-point communication, requires separate authentication mechanisms, and cannot perform digital signatures or other public-key operations \cite{Diamanti2016}.
 
@@ -76,7 +76,7 @@ CRYSTALS-Kyber is a Key Encapsulation Mechanism (KEM) based on the Module Learni
 
 \subsection{Lattice-Based Cryptography}
 
-Kyber belongs to the family of lattice-based cryptographic algorithms, which represent the most prominent approach to post-quantum security. A lattice $\mathcal{L}$ in $n$-dimensional space is a discrete subgroup that can be represented as all integer linear combinations of basis vectors:
+Kyber belongs to the family of lattice-based cryptographic algorithms, which represent the leading approach to post-quantum security. A lattice $\mathcal{L}$ in $n$-dimensional space is a discrete subgroup that can be represented as all integer linear combinations of basis vectors:
 
 \[\mathcal{L} = \left\{\sum_{i=1}^{n} a_i \mathbf{v}_i : a_i \in \mathbb{Z}\right\}\]
 
@@ -88,28 +88,24 @@ The security of lattice-based cryptography relies on computationally hard proble
 
 \textbf{Closest Vector Problem (CVP):} Given a lattice and a target point, find the lattice point closest to the target.
 
-These problems remain hard even for quantum computers. While Shor's algorithm efficiently breaks RSA and ECC by solving number-theoretic problems, no comparable quantum algorithm exists for lattice problems \cite{Regev2009}. This quantum resistance stems from the geometric nature of lattices—quantum computers excel at exploiting algebraic structures (like the cyclic groups used in RSA/ECC), but lattice problems lack the periodic structure that quantum algorithms can exploit.
+These problems remain hard even for quantum computers. While Shor's algorithm efficiently breaks RSA and ECC, no comparable quantum algorithm exists for lattice problems \cite{Regev2009}. The reason of this quantum resistance is the geometric nature of lattices. Quantum computers excel at exploiting algebraic structures (like the cyclic groups used in RSA/ECC), but lattice problems lack the periodic structure that quantum algorithms can exploit.
 
-\subsection{Why NIST Selected Lattice-Based Algorithms}
+\subsection{Standardization of Lattice-Based Cryptography}
 
-In 2022, NIST selected CRYSTALS-Kyber as the primary standard for post-quantum key encapsulation, alongside CRYSTALS-Dilithium (also lattice-based) for digital signatures \cite{NIST-Selection}. Of the four algorithms initially selected, three are lattice-based. This preference reflects several advantages:
+In July 2022, NIST selected CRYSTALS-Kyber as the primary standard for post-quantum key encapsulation, alongside CRYSTALS-Dilithium for digital signatures \cite{NIST-Selection}. Lattice-based schemes held a clear edge over competitors—comprising three of the four initial algorithms—reflects their favorable balance between quantum security and practical performance.
 
-\begin{itemize}
-\item \textbf{Mature security foundation:} Lattice problems have been extensively studied for decades with well-understood worst-case to average-case reductions \cite{Ajtai1996}
-\item \textbf{Performance efficiency:} Lattice schemes offer practical key sizes and computation speeds suitable for real-world deployment
-\item \textbf{Versatility:} Lattices support diverse cryptographic primitives including encryption, signatures, and advanced constructions
-\item \textbf{Conservative security margins:} No significant attacks have threatened the hardness assumptions despite substantial cryptanalytic effort
-\end{itemize}
+Beyond theoretical hardness, lattice schemes offer operational characteristics suitable for general-purpose deployment. Unlike code-based systems (e.g., Classic McEliece), which require public keys in the megabyte range, or isogeny-based schemes which have high computational requirements, lattice schemes maintain relatively small key sizes and fast execution times \cite{Bernstein2017}.
 
-Other post-quantum approaches like code-based (Classic McEliece) and hash-based signatures were also standardized for specific use cases, but lattice-based schemes provide the best balance of security, performance, and flexibility for general-purpose applications \cite{Bernstein2017}.
+While other families were standardized for specific use cases, the combination of manageable key sizes and performance efficiency makes lattice-based cryptography the primary candidate for current public-key infrastructure.
 
-\subsection{Mathematical Foundation: Module-LWE and its Lattice Connection}
+
+\subsection{Mathematical Foundation: Module-LWE}
 
 The security of Kyber is based on the hardness of the Module Learning With Errors (Module-LWE) problem, which is a structured variant of the Learning With Errors (LWE) problem introduced by Regev \cite{Regev2005}. The LWE problem is directly related to lattices—specifically, it can be viewed as a bounded-distance decoding problem on random lattices.
 
 Given a matrix $\mathbf{A}$ of polynomials and a vector $\mathbf{b} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where $\mathbf{s}$ is a secret and $\mathbf{e}$ is small error (noise), it is computationally hard to recover $\mathbf{s}$ even with a quantum computer. The noise term $\mathbf{e}$ represents intentional errors that obscure the algebraic structure, converting what would be a simple linear algebra problem into a lattice problem.
 
-The "Module" variant uses structured polynomial rings instead of arbitrary matrices, reason being using polynomials allows us to represent high dimensional lattice structures more efficiently while maintaining security through proper parameter selection. The hardness of Module-LWE reduces to solving worst-case lattice problems, meaning an attacker who can break Module-LWE could also solve notoriously difficult lattice problems \cite{Langlois2015}.
+The "Module" variant uses structured polynomial rings instead of arbitrary matrices, reason being using polynomials allows us to represent high dimensional lattice structures more efficiently while maintaining security through proper parameter selection. The hardness of Module-LWE reduces to solving worst-case lattice problems, meaning an attacker who can break Module-LWE could also solve previously mentioned lattice problems \cite{Langlois2015}.
 
 \subsection{Polynomial Rings}
 
@@ -121,7 +117,7 @@ Kyber operates in the polynomial ring $R_q = \mathbb{Z}_q[X]/(X^{256} + 1)$, whe
 \item Multiplication is performed modulo $X^{256} + 1$
 \end{itemize}
 
-This ring structure allows efficient implementation using Number Theoretic Transform (NTT) for fast polynomial multiplication.
+This ring structure allows using Number Theoretic Transform (NTT), which reduces the complexity of polynomial multiplication.
 
 \subsection{Key Generation, Encapsulation, and Decapsulation}
 
