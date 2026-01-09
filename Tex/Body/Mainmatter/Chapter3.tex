@@ -11,10 +11,10 @@ The cryptographic library is split into two complementary implementations:
 \begin{itemize}
 \item \textbf{Python Implementation (lib.py):} A pure Python implementation providing clarity and portability. This serves as the reference implementation and handles high-level algorithm logic, data marshaling, and application interface.
 
-\item \textbf{C Implementation (lib.c):} A high-performance native library implementing computationally intensive operations, particularly polynomial arithmetic for Kyber. The C code is compiled to a DLL/shared library and interfaced via Python's ctypes.
+\item \textbf{C Implementation (lib.c):} A high-performance native library implementing computationally intensive polynomial arithmetic for Kyber with Platform Specific Optimizations. The C code is compiled to a DLL/shared library and interfaced via Python's ctypes.
 \end{itemize}
 
-This hybrid approach allows us to maintain code clarity while achieving optimal performance for critical operations.
+This hybrid approach allows us to maintain code clarity using python, while achieving optimal performance and gaining performance measurability for critical operations.
 
 \subsection{Client-Server Architecture}
 
@@ -110,34 +110,24 @@ The implementation provides three main cryptographic operations \cite{Kyber-Spec
 \textbf{Decapsulation (Decaps):} Uses secret key to decrypt ciphertext, recovers message with error correction, derives shared secret, and performs implicit rejection for CCA security.
 \section{SIMD Optimizations}
 
-One of the key contributions of this project is demonstrating the performance impact of SIMD optimizations for Kyber.
+Kyber's operations are highly parallelizable, making them well-suited for SIMD (Single Instruction, Multiple Data) optimizations. Modern CPUs support SIMD instruction sets like AVX2, which can process multiple data points in parallel within a single CPU cycle. While Python does not natively support SIMD, we implemented the performance-critical polynomial arithmetic in C, leveraging AVX2 instructions for acceleration.
 
-\subsection{AVX2 Acceleration}
-
-The C implementation leverages AVX2 (Advanced Vector Extensions 2) instructions to parallelize operations:
+The C implementation uses AVX2 (Advanced Vector Extensions 2) to vectorize critical operations:
 
 \begin{itemize}
 \item \textbf{Vectorized NTT:} Process multiple coefficients simultaneously using 256-bit vector operations
-\item \textbf{Parallel Reduction:} Apply modular reduction to vectors of coefficients
-\item \textbf{SIMD Polynomial Operations:} Vectorized addition, subtraction, and coefficient manipulation
+\item \textbf{Polynomial Arithmetic:} Vectorized addition, subtraction, and coefficient-wise operations
 \end{itemize}
 
-The library automatically detects CPU capabilities at runtime and uses the best available instruction set.
+The library is compiled with the \texttt{/arch:AVX2} flag, which generates AVX2 instructions throughout the code. The compiled binary uses AVX2 instructions statically; there is no runtime detection or fallback to non-SIMD code paths. This design assumes testing and compiling on the same machine.
 
-\subsection{Compilation for Optimization}
-
-The C library is compiled with aggressive optimizations:
+The compilation command used is:
 
 \begin{verbatim}
 cl /LD /O2 /W3 /arch:AVX2 lib.c /link /OUT:lib.dll
 \end{verbatim}
 
-This enables:
-\begin{itemize}
-\item AVX2 instruction generation
-\item Loop unrolling and vectorization
-\item Aggressive inlining of small functions
-\end{itemize}
+The \texttt{/O2} flag enables aggressive optimizations including loop unrolling, function inlining, and compiler-driven vectorization of suitable code patterns beyond explicit SIMD intrinsics.
 
 \section{Protocol Design}
 
