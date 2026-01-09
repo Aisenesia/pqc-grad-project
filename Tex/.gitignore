@@ -326,3 +326,7 @@ TSWLatexianTemp*
 #*Notes.bib
 
 main.pdf
+
+compile.ps1
+
+needed/

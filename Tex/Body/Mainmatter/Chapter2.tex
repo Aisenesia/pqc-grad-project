@@ -47,6 +47,22 @@ Elliptic Curve Diffie-Hellman (ECDH) works as follows:
 
 The security relies on the Elliptic Curve Discrete Logarithm Problem (ECDLP)—given $Q$ and $G$, it is computationally infeasible to find $d$ such that $Q = d \cdot G$.
 
+\section{The Quantum Threat and the Need for Post-Quantum Cryptography}
+
+While classical cryptographic systems like RSA and ECC have secured communications for decades, the development of large-scale quantum computers poses a fundamental threat to these algorithms, making post-quantum cryptography an urgent priority.
+
+\subsection{Shor's Algorithm and the Quantum Threat}
+
+In 1994, Peter Shor developed a quantum algorithm that efficiently solves both integer factorization and discrete logarithm problems—the mathematical foundations of RSA and ECC security \cite{Shor1997}. By exploiting quantum superposition and entanglement, Shor's algorithm can break these cryptosystems in polynomial time, whereas classical computers require exponential time \cite{Nielsen2010}.
+
+Though large-scale quantum computers do not yet exist, the "harvest now, decrypt later" threat—where adversaries collect encrypted data today to decrypt once quantum computers are available—demands immediate action to protect long-term sensitive data \cite{Mosca2018}.
+
+\subsection{Quantum Key Distribution: A Limited Alternative}
+
+Quantum Key Distribution (QKD) offers information-theoretic security by using quantum mechanics principles to detect eavesdropping during key exchange \cite{Bennett1984}. However, QKD faces critical practical limitations: it requires expensive specialized hardware, is limited to distances under 200 kilometers, provides only point-to-point communication, requires separate authentication mechanisms, and cannot perform digital signatures or other public-key operations \cite{Diamanti2016}.
+
+Most importantly, QKD is not a drop-in replacement for existing public-key infrastructure. In contrast, post-quantum algorithms like CRYSTALS-Kyber can be deployed as software updates over existing networks, providing comprehensive cryptographic services while maintaining compatibility with current protocols \cite{NIST-PQC}.
+
 \section{Post-Quantum Cryptography: CRYSTALS-Kyber}
 
 CRYSTALS-Kyber is a Key Encapsulation Mechanism (KEM) based on the Module Learning With Errors (Module-LWE) problem, which is believed to be secure against quantum attacks \cite{Peikert2016}. Unlike traditional key exchange where both parties contribute to the shared secret, a KEM works asymmetrically:
@@ -58,9 +74,42 @@ CRYSTALS-Kyber is a Key Encapsulation Mechanism (KEM) based on the Module Learni
 \item The receiver decapsulates using their private key to recover the session key
 \end{enumerate}
 
-\subsection{Mathematical Foundation: Module-LWE}
+\subsection{Lattice-Based Cryptography}
 
-The security of Kyber is based on the hardness of the Module-LWE problem. Given a matrix $\mathbf{A}$ of polynomials and a vector $\mathbf{b} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where $\mathbf{s}$ is a secret and $\mathbf{e}$ is small error (noise), it is computationally hard to recover $\mathbf{s}$ even with a quantum computer.
+Kyber belongs to the family of lattice-based cryptographic algorithms, which represent the most prominent approach to post-quantum security. A lattice $\mathcal{L}$ in $n$-dimensional space is a discrete subgroup that can be represented as all integer linear combinations of basis vectors:
+
+\[\mathcal{L} = \left\{\sum_{i=1}^{n} a_i \mathbf{v}_i : a_i \in \mathbb{Z}\right\}\]
+
+where $\mathbf{v}_1, \ldots, \mathbf{v}_n$ form the lattice basis. Geometrically, lattices can be visualized as regular grids of points extending infinitely in all directions \cite{Micciancio2009}.
+
+The security of lattice-based cryptography relies on computationally hard problems in lattices:
+
+\textbf{Shortest Vector Problem (SVP):} Given a lattice basis, find the shortest non-zero vector in the lattice.
+
+\textbf{Closest Vector Problem (CVP):} Given a lattice and a target point, find the lattice point closest to the target.
+
+These problems remain hard even for quantum computers. While Shor's algorithm efficiently breaks RSA and ECC by solving number-theoretic problems, no comparable quantum algorithm exists for lattice problems \cite{Regev2009}. This quantum resistance stems from the geometric nature of lattices—quantum computers excel at exploiting algebraic structures (like the cyclic groups used in RSA/ECC), but lattice problems lack the periodic structure that quantum algorithms can exploit.
+
+\subsection{Why NIST Selected Lattice-Based Algorithms}
+
+In 2022, NIST selected CRYSTALS-Kyber as the primary standard for post-quantum key encapsulation, alongside CRYSTALS-Dilithium (also lattice-based) for digital signatures \cite{NIST-Selection}. Of the four algorithms initially selected, three are lattice-based. This preference reflects several advantages:
+
+\begin{itemize}
+\item \textbf{Mature security foundation:} Lattice problems have been extensively studied for decades with well-understood worst-case to average-case reductions \cite{Ajtai1996}
+\item \textbf{Performance efficiency:} Lattice schemes offer practical key sizes and computation speeds suitable for real-world deployment
+\item \textbf{Versatility:} Lattices support diverse cryptographic primitives including encryption, signatures, and advanced constructions
+\item \textbf{Conservative security margins:} No significant attacks have threatened the hardness assumptions despite substantial cryptanalytic effort
+\end{itemize}
+
+Other post-quantum approaches like code-based (Classic McEliece) and hash-based signatures were also standardized for specific use cases, but lattice-based schemes provide the best balance of security, performance, and flexibility for general-purpose applications \cite{Bernstein2017}.
+
+\subsection{Mathematical Foundation: Module-LWE and its Lattice Connection}
+
+The security of Kyber is based on the hardness of the Module Learning With Errors (Module-LWE) problem, which is a structured variant of the Learning With Errors (LWE) problem introduced by Regev \cite{Regev2005}. The LWE problem is directly related to lattices—specifically, it can be viewed as a bounded-distance decoding problem on random lattices.
+
+Given a matrix $\mathbf{A}$ of polynomials and a vector $\mathbf{b} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where $\mathbf{s}$ is a secret and $\mathbf{e}$ is small error (noise), it is computationally hard to recover $\mathbf{s}$ even with a quantum computer. The noise term $\mathbf{e}$ represents intentional errors that obscure the algebraic structure, converting what would be a simple linear algebra problem into a lattice problem.
+
+The "Module" variant uses structured polynomial rings instead of arbitrary matrices, reason being using polynomials allows us to represent high dimensional lattice structures more efficiently while maintaining security through proper parameter selection. The hardness of Module-LWE reduces to solving worst-case lattice problems, meaning an attacker who can break Module-LWE could also solve notoriously difficult lattice problems \cite{Langlois2015}.
 
 \subsection{Polynomial Rings}
 
@@ -86,11 +135,13 @@ The Kyber algorithm consists of three main operations:\footnote{Detailed specifi
 
 \section{Security Parameters and Variants}
 
-Kyber comes in three security levels:
+CRYSTALS-Kyber is parameterized by a value $k$ that determines the dimension of the polynomial matrices used in the algorithm. Larger values provide higher security but require more computation and larger key sizes \cite{NIST-Selection}.
+
+Kyber comes in three security levels, where the numeric suffix indicates the dimension parameter:
 \begin{itemize}
-\item \textbf{Kyber-512:} Security comparable to AES-128 (128-bit security)
-\item \textbf{Kyber-768:} Security comparable to AES-192 (192-bit security)
-\item \textbf{Kyber-1024:} Security comparable to AES-256 (256-bit security)
+\item \textbf{Kyber-512} ($k=2$): Security comparable to AES-128, classified as NIST Security Level 1 (128-bit classical security)
+\item \textbf{Kyber-768} ($k=3$): Security comparable to AES-192, classified as NIST Security Level 3 (192-bit classical security)
+\item \textbf{Kyber-1024} ($k=4$): Security comparable to AES-256, classified as NIST Security Level 5 (256-bit classical security)
 \end{itemize}
 
-This project implements Kyber-512 as it provides adequate security for most applications while offering better performance than higher security levels.
+These security levels are defined by NIST to match the computational effort required to break standard symmetric algorithms like AES \cite{NIST-PQC}. This project implements Kyber-512 as it provides adequate security for most applications while offering better performance than higher security levels.
