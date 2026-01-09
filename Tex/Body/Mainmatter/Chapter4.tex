@@ -24,14 +24,14 @@ Table \ref{tab:exec-time} shows the mean execution times for various cryptograph
 \begin{tabular}{l|r|r}
 \hline
 \textbf{Algorithm} & \textbf{Key Generation} & \textbf{Exchange/Encapsulation} \\ \hline
-ECC (secp256k1) & 103.92 & 104.45 \\
-Kyber-512 & 44.65 & 71.31 \\
-Kyber-768 & 71.27 & 115.05 \\
-Kyber-1024 & 122.53 & 168.72 \\ \hline
+ECC (secp256k1) & 151.84 & 154.55 \\
+Kyber-512 & 62.38 & 87.50 \\
+Kyber-768 & 117.75 & 149.01 \\
+Kyber-1024 & 191.46 & 226.26 \\ \hline
 \end{tabular}
 \end{table}
 
-Remarkably, Kyber-512 demonstrates superior performance compared to ECC, with key generation taking only 44.65 ms (compared to ECC's 103.92 ms) and encapsulation completing in 71.31 ms. This represents a 57\% improvement in key generation speed and a 32\% improvement in key exchange operations.
+Remarkably, Kyber-512 demonstrates superior performance compared to ECC, with key generation taking only 62.38 ms (compared to ECC's 151.84 ms) and encapsulation completing in 87.50 ms. This represents a 59\% improvement in key generation speed and a 43\% improvement in key exchange operations.
 
 \subsection{Performance Relative to ECC Baseline}
 
@@ -44,9 +44,9 @@ Table \ref{tab:slowdown} presents the performance of each algorithm relative to 
 \hline
 \textbf{Algorithm} & \textbf{Key Generation} & \textbf{Encapsulation} \\ \hline
 ECC (baseline) & 1.00x & 1.00x \\
-Kyber-512 & \textbf{0.43x} & \textbf{0.69x} \\
-Kyber-768 & 0.69x & 1.10x \\
-Kyber-1024 & 1.18x & 1.62x \\ \hline
+Kyber-512 & \textbf{0.41x} & \textbf{0.57x} \\
+Kyber-768 & 0.78x & 0.96x \\
+Kyber-1024 & 1.26x & 1.46x \\ \hline
 \end{tabular}
 \end{table}
 
@@ -79,36 +79,36 @@ Table \ref{tab:memory} shows peak memory consumption during cryptographic operat
 \begin{tabular}{l|r|r}
 \hline
 \textbf{Algorithm} & \textbf{Key Generation} & \textbf{Exchange/Encapsulation} \\ \hline
-ECC & 0.03 & 0.05 \\
-Kyber-512 & 0.14 & 0.19 \\
-Kyber-768 & 0.22 & 0.29 \\
-Kyber-1024 & 0.32 & 0.33 \\ \hline
+ECC & 0.00 & 0.00 \\
+Kyber-512 & 0.11 & 0.13 \\
+Kyber-768 & 0.18 & 0.20 \\
+Kyber-1024 & 0.27 & 0.29 \\ \hline
 \end{tabular}
 \end{table}
 
-Memory usage remains modest across all implementations, with even Kyber-1024 requiring less than 0.4 MB for operations—well within the capabilities of resource-constrained devices.
+Memory usage remains modest across all implementations, with even Kyber-1024 requiring less than 0.3 MB for operations—well within the capabilities of resource-constrained devices.
 
 \section{Analysis and Discussion}
 
 \subsection{Kyber-512 Performance Advantage}
 
-The benchmark results reveal a surprising finding: Kyber-512 with AVX2 SIMD optimizations achieves superior performance compared to ECC across all operations. Key generation is 2.3x faster (43\% of ECC time), and encapsulation is 1.5x faster (69\% of ECC time). This demonstrates that post-quantum cryptography is not only viable but can actually outperform classical algorithms with proper optimization.
+The benchmark results reveal a surprising finding: Kyber-512 with AVX2 SIMD optimizations achieves superior performance compared to ECC across all operations. Key generation is 2.4x faster (41\% of ECC time), and encapsulation is 1.8x faster (57\% of ECC time). This demonstrates that post-quantum cryptography is not only viable but can actually outperform classical algorithms with proper optimization.
 
 \subsection{Performance Scaling Across Security Levels}
 
 As security levels increase, performance characteristics change:
 
 \begin{itemize}
-\item \textbf{Kyber-512:} Fastest option, 0.43x-0.69x ECC baseline (quantum-resistant equivalent to AES-128)
-\item \textbf{Kyber-768:} Balanced performance, 0.69x-1.10x ECC baseline (quantum-resistant equivalent to AES-192)
-\item \textbf{Kyber-1024:} Highest security, 1.18x-1.62x ECC baseline (quantum-resistant equivalent to AES-256)
+\item \textbf{Kyber-512:} Fastest option, 0.41x-0.57x ECC baseline (quantum-resistant equivalent to AES-128)
+\item \textbf{Kyber-768:} Balanced performance, 0.78x-0.96x ECC baseline (quantum-resistant equivalent to AES-192)
+\item \textbf{Kyber-1024:} Highest security, 1.26x-1.46x ECC baseline (quantum-resistant equivalent to AES-256)
 \end{itemize}
 
 For most applications, Kyber-512 provides adequate security with the best performance characteristics.
 
 \subsection{The Importance of SIMD Optimization}
 
-The performance advantage of Kyber over ECC is entirely attributable to SIMD optimizations. Without AVX2 acceleration, pure Python implementations would show Kyber to be 20-40x slower than ECC. The polynomial operations in Kyber are inherently parallelizable, making them ideal for SIMD vectorization.
+The performance advantage of Kyber over ECC is entirely attributable to SIMD optimizations. Without AVX2 acceleration, pure Python implementations show Kyber to be 1.7-2.1x slower than with SIMD (average speedup of 1.92x across all operations). The polynomial operations in Kyber are inherently parallelizable, making them ideal for SIMD vectorization.
 
 Key optimization techniques employed:
 \begin{itemize}
@@ -145,7 +145,7 @@ The transition from classical algorithms to Post-Quantum Cryptography represents
 
 Interestingly, data shows that post-quantum security does not necessarily come with a performance penalty. While Kyber introduces a significant increase in bandwidth usage (approximately 23x overhead for Kyber-512 relative to ECC), the reduction in computational cost offsets this transmission overhead in many scenarios.
 
-Our results indicate that Kyber-512 reduces the computational latency of the handshake process by roughly 57\% compared to secp256k1. For high-bandwidth environments, this computational speedup results in a lower handshake time. However, in bandwidth-constrained environments (e.g., IoT/LoRaWAN), the transmission time for keys may become the bottleneck. Systems migrating to Kyber must therefore account for Maximum Transmission Unit (MTU) fragmentation, as Kyber keys and ciphertexts exceed the standard Ethernet MTU of 1500 bytes, potentially requiring packet fragmentation handling at the network layer \cite{Paquin2020}.
+Our results indicate that Kyber-512 reduces the computational latency of the handshake process by roughly 41-43\% compared to secp256k1. For high-bandwidth environments, this computational speedup results in a lower handshake time. However, in bandwidth-constrained environments (e.g., IoT/LoRaWAN), the transmission time for keys may become the bottleneck. Systems migrating to Kyber must therefore account for Maximum Transmission Unit (MTU) fragmentation, as Kyber keys and ciphertexts exceed the standard Ethernet MTU of 1500 bytes, potentially requiring packet fragmentation handling at the network layer \cite{Paquin2020}.
 
 \subsection{Hybrid Implementation Strategies}
 
@@ -153,11 +153,11 @@ Immediate replacement of classical algorithms with Kyber is generally not recomm
 
 In a hybrid scheme, the final shared secret is derived from both an ECC key exchange and a Kyber encapsulation:
 \[ K_{final} = \text{KDF}(K_{ECC} || K_{Kyber}) \]
-This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber's low computational footprint (approx. 44ms for KeyGen), adding it to an existing ECC handshake introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
+This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber's low computational footprint (approx. 62ms for KeyGen), adding it to an existing ECC handshake introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
 
 \subsection{Hardware Dependencies and Optimization Constraints}
 
-Our benchmarks revealed that Kyber's performance advantage is heavily dependent on specific instruction set architectures. The reported speedups (0.43x slowdown factor vs ECC) rely on the vectorization of polynomial operations in the Ring-$R_q$.
+Our benchmarks revealed that Kyber's performance advantage is heavily dependent on specific instruction set architectures. The reported speedups (0.41x slowdown factor vs ECC for Kyber-512) rely on the vectorization of polynomial operations in the Ring-$R_q$.
 
 The reliance on AVX2 instructions for the Number Theoretic Transform (NTT) implies that performance is consistent on modern x86-64 server hardware but may degrade significantly on legacy platforms or embedded architectures lacking SIMD support. Future research must focus on optimizing polynomial multiplication for scalar architectures to ensure consistent performance across diverse networks. This hardware dependency suggests that during the migration phase, server-side hardware capability adjustments are necessary for enabling Kyber \cite{Kyber-Spec,Botros2020}.
 

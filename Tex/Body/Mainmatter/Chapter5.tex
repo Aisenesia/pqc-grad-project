@@ -2,18 +2,16 @@
 
 \section{Summary of Contributions}
 
-This graduation project successfully achieved its objectives of understanding, implementing, and evaluating post-quantum cryptography alongside classical cryptographic systems. The key contributions include:
+This project implemented and evaluated post-quantum cryptography alongside classical cryptographic systems. The contributions are:
 
 \begin{enumerate}
-\item \textbf{Comprehensive Theoretical Understanding:} We studied the mathematical foundations of both elliptic curve cryptography and lattice-based post-quantum cryptography, gaining deep insights into their security assumptions and operational principles.
+\item Implemented ECC (secp256k1) and CRYSTALS-Kyber (Kyber-512) with key generation, key exchange, and encapsulation/decapsulation operations.
 
-\item \textbf{Complete Implementation:} We developed a full-featured cryptographic library implementing both ECC (secp256k1) and CRYSTALS-Kyber (Kyber-512) with proper key generation, key exchange, and encapsulation/decapsulation mechanisms.
+\item Demonstrated SIMD optimization impact on post-quantum algorithms, achieving 1.7-2.1× performance improvements through AVX2 vectorization (average speedup of 1.92×).
 
-\item \textbf{Performance Optimization:} We demonstrated the critical importance of SIMD optimizations for post-quantum algorithms, achieving 100-200× performance improvements through AVX2 vectorization of polynomial arithmetic.
+\item Built a client-server system with real-time visualization demonstrating practical deployment of both cryptographic approaches.
 
-\item \textbf{Practical Demonstration:} We built a complete client-server system with real-time visualization, showing that post-quantum cryptography can be deployed in practical applications with acceptable performance.
-
-\item \textbf{Comparative Analysis:} We provided detailed performance benchmarks comparing classical and post-quantum approaches under different implementation strategies.
+\item Provided performance benchmarks comparing classical and post-quantum implementations under different optimization strategies.
 \end{enumerate}
 
 \section{Key Findings}
@@ -60,8 +58,10 @@ Implementing other NIST-selected post-quantum algorithms such as:
 Further performance improvements could be achieved through:
 \begin{itemize}
 \item Assembly language implementations of critical functions
-\item GPU acceleration for batch operations
-\item ARM NEON optimizations for mobile platforms
+\item GPU acceleration (CUDA, OpenCL) for batch operations
+\item Multithreaded parallel processing: Kyber operations are embarrassingly parallel, allowing simultaneous key generation and encapsulation for multiple sessions without inter-thread dependencies
+\item Edge Device optimizations for mobile platforms (ARM, RISC-V)
+\item Incorporating arithmetic optimizations (e.g., Barrett reduction, Montgomery multiplication etc.)
 \end{itemize}
 
 \subsection{Security Enhancements}
@@ -76,6 +76,12 @@ Additional security features could include:
 \subsection{Hybrid Cryptography}
 
 Implementing hybrid schemes that combine classical and post-quantum algorithms for defense-in-depth, providing security even if one algorithm is broken.
+
+\subsection{Middleware-Based Secure Communication}
+
+Development of a lightweight cryptographic middleware layer that provides post-quantum secure communication channels independent of the underlying application protocols.
+
+Such a middleware could enable rapid post-quantum adoption and enhanced security guarantees, serving as a transitional solution during the migration period, it working regardless of TLS existence will create a redundancy, but also provide a fallback mechanism in case of TLS vulnerabilities.
 
 \subsection{Production Deployment}
 

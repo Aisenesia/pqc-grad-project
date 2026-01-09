@@ -189,12 +189,13 @@ The dashboard connects to the server via WebSocket, receiving JSON-formatted sta
 The implementation is organized into several Python modules:
 
 \begin{itemize}
-\item \textbf{lib.py:} Core cryptographic library (792 lines)
+\item \textbf{lib.py:} Core cryptographic library
 \item \textbf{lib.c:} Native C implementation for performance
-\item \textbf{client.py:} Client application with interactive interface (378 lines)
-\item \textbf{server.py:} Server managing connections and coordination (666 lines)
+\item \textbf{client.py:} Client application with interactive interface 
+\item \textbf{server.py:} Server managing connections and coordination
 \item \textbf{performance\_comparison.py:} Benchmarking utilities
 \item \textbf{breaker.py:} Stress testing and security analysis tools
+\item \textbf{app.py:} Application, integrating client-server and dashboard components
 \end{itemize}
 
 The modular structure allows independent testing and development of each component while maintaining clean interfaces between layers.
