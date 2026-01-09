@@ -30,16 +30,23 @@ To demonstrate practical key exchange, we implemented a client-server system wit
 
 \section{ECC Implementation}
 
-The ECC implementation includes:
+The ECC implementation serves as a comparative baseline for evaluating post-quantum algorithms. This section focuses on implementation-specific choices and algorithms used in the system.
 
-\begin{itemize}
-\item Point addition and doubling on the secp256k1 curve
-\item Scalar multiplication using the double-and-add algorithm
-\item Modular arithmetic optimized for the curve's prime field
-\item Key generation and ECDH shared secret computation
-\end{itemize}
+\subsection{Algorithmic Choices}
 
-The implementation ensures constant-time operations where possible to mitigate timing attacks.
+\textbf{Scalar Multiplication:} The implementation uses the double-and-add algorithm for computing $k \cdot P$. For each bit of the scalar $k$ (from most significant to least), the algorithm doubles the current result and conditionally adds the base point if the bit is 1. This requires approximately 256 doublings and 128 additions for 256-bit scalars.
+
+The double-and-add approach was chosen over more sophisticated methods (windowed multiplication, Montgomery ladder) to balance performance with implementation simplicity. While other methods improve security for real world use cases, they are not really relevant in terms of key exchange,we prioritized clarity over embedded security concerns.
+
+\textbf{Modular Inversion:} Elliptic curve point operations require computing slopes for point addition and doubling. Point addition uses $\lambda = \frac{y_2 - y_1}{x_2 - x_1}$ while point doubling uses $\lambda = \frac{3x_1^2}{2y_1}$. Since division does not exist directly in modular arithmetic, division by $b$ is implemented as multiplication by the modular inverse: $\frac{a}{b} \equiv a \cdot b^{-1} \pmod{p}$.
+
+The implementation computes modular inverses using Fermat's Little Theorem~\cite{long_number_theory}. For prime modulus $p$, the theorem states that $a^{p-1} \equiv 1 \pmod{p}$, which implies $a^{p-2} \equiv a^{-1} \pmod{p}$. Thus, computing $b^{-1}$ reduces to computing $b^{p-2} \bmod p$ via modular exponentiation. For secp256k1's prime $p = 2^{256} - 2^{32} - 977$, this requires one exponentiation operation. While the Extended Euclidean Algorithm offers slightly better performance, Fermat's Little Theorem provides a simpler implementation with acceptable computational overhead.
+
+\subsection{Implementation Details}
+
+\textbf{Random Number Generation:} Private keys are generated as 256-bit random integers in the range $[1, n-1]$ using Python's \texttt{secrets} module, which provides cryptographically secure random values suitable for key generation.
+
+\textbf{Key Derivation:} The shared secret point's $x$-coordinate is extracted, converted to a 32-byte value, and hashed with SHA-256 to derive the final symmetric encryption key. This additional hashing step ensures uniform distribution and binds the key to the protocol context.
 
 \section{Kyber Implementation}
 
