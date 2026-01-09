@@ -3,7 +3,8 @@ DONE:   1.3.,
 DONE:   2.1, 
 DONE:   2.2
 EXPAND: 2.4.5. Biraz daha detaylı anlatılabilir
-EDIT:   3.1.1 sub For C implementation, express performance meausurability.
+EDIT:   3.1.1. sub For C implementation, express performance meausurability.
+EDIT    3.2. ECCye giriş.
 EDIT:    3.4 Belki simd yanında, multithreadeddan bahsedilebilir, kyber emberrassingly parallel.
 EDIT:    3.6, kod satırlarına gerek yok, (daha generic olabilir mi bilemedim?), lib.py lib.cnin lib olduğuna dikkat çekmek mantıklı, lib.py içerisinde testler de var.
 EDIT:    4.2.1, Simd olmayan halleri tabloya eklenebilir (eklenirse yazının da değişmesi lazım), yüzdeler verilen sayılar vs kontrol edilmeli
@@ -23,3 +24,8 @@ EDIT: Bibliography, shit ton of referance lazim, ungodly amounts of referance, v
 GENEL EDIT: Bahsedilen bilgilerin referanslarına göre belirtilmeleri lazım kullanılan yerlerde (e.g. Kyber anlatılan yerde nist in kyber spesifikasyonu)
 
 GENEL EDIT2: Wording, diğer editler yapılırken göze çarpan kısımlar törpülensin, ayrıca sonda baştan sona okunup wording düzenlemesi yapılacak.
+
+
+Hakan Additional not:
+1.1. Referanslar, RSA ve ECC referansı eklenebilir, Quantum Bilgisayalar gelişiyor?, nasıl biliyoruz? refereans. tangible? primary algorithm?
+1.2 underpinnings?
