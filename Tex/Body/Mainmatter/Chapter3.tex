@@ -60,13 +60,13 @@ The NTT transforms polynomial multiplication in the coefficient domain into poin
 
 \subsection{Extendable Output Functions (XOF)}
 
-Kyber uses SHAKE-128, a member of the SHA-3 family, as an extendable output function (XOF) for generating pseudorandom data. Unlike traditional hash functions with fixed output length, XOFs can produce arbitrary-length outputs from a short seed.
+Kyber uses SHAKE-128, a member of the SHA-3 family, as an extendable output function (XOF) for generating pseudorandom data. Unlike traditional hash functions with fixed output length, XOFs can produce arbitrary-length outputs from a given seed.
 
 The primary application is generating the public matrix $\mathbf{A}$:
 \begin{itemize}
-    \item Instead of transmitting the entire matrix (requiring $k \times k \times 256$ coefficients, approximately 1.5 KB for Kyber-512), only a 32-byte seed is exchanged.
-    \item Both parties deterministically expand this seed using SHAKE-128 to reconstruct the identical matrix $\mathbf{A}$.
-    \item This reduces the matrix representation from $\approx$1536 bytes to 32 bytes, keeping the total public key size at 800 bytes \cite{Kyber-Spec}.
+    \item Instead of transmitting the entire matrix (requiring $k \times k \times 256$ coefficients, approximately 1.5 KB for Kyber-512), only a 32-byte seed is sent.
+    \item Both parties expand this seed using SHAKE-128 XOF to reconstruct the matrix $\mathbf{A}$, which is identical for both parties.
+    \item This reduces the necessary information exchange for public matrix $\mathbf{A}$ from $\approx$1536 bytes to 32 bytes, keeping the total public key size at 800 bytes. Other part of the public key $\mathbf{t}$ cannot be transmitted this way, because it has to include the randomly generated error \cite{Kyber-Spec}.
 \end{itemize}
 
 SHAKE functions are also used for hashing operations in the Fujisaki-Okamoto transform, which provides CCA security by binding ciphertexts to their randomness \cite{Kyber-Spec}.
