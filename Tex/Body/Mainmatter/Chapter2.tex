@@ -68,10 +68,10 @@ Most importantly, QKD is not a drop-in replacement for existing public-key infra
 CRYSTALS-Kyber is a Key Encapsulation Mechanism (KEM) based on the Module Learning With Errors (Module-LWE) problem, which is believed to be secure against quantum attacks \cite{Peikert2016}. Unlike traditional key exchange where both parties contribute to the shared secret, a KEM works asymmetrically:
 
 \begin{enumerate}
-\item The receiver generates a public-private key pair
-\item The sender uses the public key to encapsulate a random session key, producing a ciphertext
-\item The sender transmits the ciphertext
-\item The receiver decapsulates using their private key to recover the session key
+\item The Alice generates a public-private key pair
+\item The Bob uses Alice's public key to encapsulate a random session key, producing a ciphertext
+\item The Bob transmits the ciphertext, he just generated, to Alice
+\item The Alice decapsulates using their private key to recover the session key
 \end{enumerate}
 
 \subsection{Lattice-Based Cryptography}

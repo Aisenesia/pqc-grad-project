@@ -1,10 +1,156 @@
 \chapter*{Appendices}
 \addcontentsline{toc}{chapter}{Appendices}
 
-\section*{Appendix 1: Some publications}
+\section*{Appendix 1: Complete Benchmark Data}
 
-No one significant, in AAA.
+All benchmarks were executed with $N=1000$ iterations on Windows 11 with Microsoft Visual C++ 2022 compiler using /O2 /arch:AVX2 flags.
 
-\section*{Appendix 2: Some explanation}
+\textbf{Statistical Summary:}
 
-None needed mate!
+\begin{table}[h]
+\centering
+\caption{Complete Statistical Data (milliseconds)}
+\begin{tabular}{l|r|r|r|r}
+\hline
+\textbf{Algorithm/Operation} & \textbf{Mean} & \textbf{Min} & \textbf{Max} & \textbf{Std Dev} \\ \hline
+ECC KeyGen & 97.76 & - & - & - \\
+ECC Exchange & 95.62 & - & - & - \\
+Kyber-512 KeyGen (SIMD) & 37.75 & - & - & - \\
+Kyber-512 Encaps (SIMD) & 54.37 & - & - & - \\
+Kyber-512 KeyGen (no SIMD) & 70.54 & - & - & - \\
+Kyber-512 Encaps (no SIMD) & 107.15 & - & - & - \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{Hardware Configuration:}
+
+\begin{itemize}
+\item \textbf{CPU:} x86-64 processor with AVX2 support
+\item \textbf{OS:} Windows 11
+\item \textbf{Compiler:} MSVC 2022 (\_MSC\_VER 1900+)
+\item \textbf{Python:} 3.x with ctypes
+\item \textbf{Optimization Flags:} /O2 /arch:AVX2 /fp:fast
+\end{itemize}
+
+\section*{Appendix 2: Protocol Wire Format}
+
+\textbf{Packet Structure}
+
+All packets follow the structure:
+\begin{verbatim}
+[Header Byte] [Length (2 bytes, big-endian)] [Payload]
+\end{verbatim}
+
+\textbf{Message Types:}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{l|l|l}
+\hline
+\textbf{Header} & \textbf{Value} & \textbf{Description} \\ \hline
+HEADER\_HANDSHAKE & 0x01 & Public key transmission \\
+HEADER\_MESSAGE & 0x02 & Encrypted application data \\
+HEADER\_SYSTEM & 0x03 & Control/status messages \\
+HEADER\_KYBER\_CAPSULE & 0x04 & Kyber ciphertext \\ \hline
+\end{tabular}
+\end{table}
+
+\textbf{Mode Identifiers:}
+
+\begin{itemize}
+\item \textbf{MODE\_ECC (0x01):} ECC key exchange mode
+\item \textbf{MODE\_KYBER (0x02):} Kyber encapsulation mode
+\end{itemize}
+
+\textbf{Handshake Payload Format:}
+
+For HEADER\_HANDSHAKE packets:
+\begin{verbatim}
+[Mode Byte] [Public Key Data]
+\end{verbatim}
+
+\begin{itemize}
+\item ECC: 1 byte mode + 33 bytes compressed public key = 34 bytes total
+\item Kyber-512: 1 byte mode + 800 bytes public key = 801 bytes total
+\item Kyber-768: 1 byte mode + 1184 bytes public key = 1185 bytes total
+\item Kyber-1024: 1 byte mode + 1568 bytes public key = 1569 bytes total
+\end{itemize}
+
+\section*{Appendix 3: Source Code and Reproducibility}
+
+\textbf{Repository Access:}
+
+The complete source code for this project is available on GitHub:
+
+\begin{center}
+\texttt{https://github.com/Aisenesia/pqc-grad-project/tree/SIMD}
+\end{center}
+
+The repository includes all implementation files, benchmarking scripts, client-server demonstration code, and the web-based visualization dashboard.
+
+\textbf{Obtaining the Source Code:}
+
+Clone the repository using Git:
+\begin{verbatim}
+git clone https://github.com/Aisenesia/pqc-grad-project.git
+cd pqc-grad-project
+\end{verbatim}
+
+Alternatively, download the source as a ZIP archive from the GitHub repository page.
+
+\textbf{Project Structure:}
+
+Start the server (handles TCP port 8000 and WebSocket port 8080):
+\begin{verbatim}
+python server.py
+\end{verbatim}
+
+Start clients in separate terminals:
+\begin{verbatim}
+python client.py
+\end{verbatim}
+
+Access the web dashboard at \texttt{http://localhost:8080/dashboard/}.
+
+\textbf{Compilation:}
+
+Compile the C library with SIMD optimizations:
+\begin{verbatim}
+cl /O2 /arch:AVX2 /LD lib.c /Fe:lib.dll
+\end{verbatim}
+
+For non-SIMD baseline comparison:
+\begin{verbatim}
+cl /O2 /LD plain_lib.c /Fe:plain_lib.dll
+\end{verbatim}
+
+\textbf{Running Benchmarks:}
+
+Execute performance comparison with 1000 iterations:
+\begin{verbatim}
+python benchmark_comparison.py -n 1000 -o pytest.csv lib.py plain_lib.py
+\end{verbatim}
+
+Results are written to CSV files in the \texttt{pytest.csv/} directory.
+
+Server and Client Execution
+
+Start the server (handles TCP port 8000 and WebSocket port 8080):
+\begin{verbatim}
+python server.py
+\end{verbatim}
+
+Start clients in separate terminals:
+\begin{verbatim}
+python client.py
+\end{verbatim}
+
+Access the web dashboard at \texttt{http://localhost:8080/dashboard/}.
+
+Dependencies
+
+\begin{itemize}
+\item Python 3.x
+\item Microsoft Visual C++ 2022 (for Windows compilation)
+\item No external Python packages required (uses standard library only)
+\end{itemize}

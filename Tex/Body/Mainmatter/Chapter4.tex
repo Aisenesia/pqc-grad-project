@@ -10,7 +10,7 @@ All performance benchmarks were conducted on the following system configuration:
 \item CPU: Modern x86-64 processor with AVX2 support
 \end{itemize}
 
-The performance comparison script (performance\_comparison.py) executes multiple iterations of key generation and key exchange operations for both ECC and Kyber implementations (512, 768, and 1024-bit security levels). Each test was run multiple times to obtain statistically meaningful results.
+The performance comparison script (performance\_comparison.py) executes multiple iterations of key generation and key exchange/encapsulation operations for both ECC and Kyber implementations (512, 768, and 1024-bit security levels). Each test was run multiple times to obtain statistically meaningful results.
 
 \section{Performance Metrics}
 
@@ -128,12 +128,12 @@ Without SIMD, Kyber-512 shows mixed results: key generation is faster than ECC (
 Key optimization techniques employed:
 \begin{itemize}
 \item Vectorized Number Theoretic Transform (NTT) for polynomial multiplication
-\item Parallel coefficient reduction using AVX2 instructions processing 16 coefficients simultaneously
+\item Parallel coefficient reduction using AVX2 instructions processing multiple coefficients simultaneously
 \item Optimized memory access patterns to maximize cache efficiency
 \item Loop unrolling and aggressive compiler optimizations
 \end{itemize}
 
-The polynomial operations in Kyber are inherently parallelizable—matrix-vector multiplications operate on independent coefficients, and NTT computations follow a butterfly pattern amenable to vectorization. This architectural match between algorithm and hardware is what enables the observed speedups.
+The polynomial operations in Kyber are parallelizable in their core. Matrix-vector multiplications operate on independent coefficients, and NTT computations follow a butterfly pattern amenable to vectorization. This architectural match between algorithm and hardware is what enables the observed speedups.
 
 \subsection{Performance Scaling Across Security Levels}
 
@@ -199,7 +199,7 @@ Immediate replacement of classical algorithms with Kyber is generally not recomm
 
 In a hybrid scheme, the final shared secret is derived from both an ECC key exchange and a Kyber encapsulation:
 \[ K_{final} = \text{KDF}(K_{ECC} || K_{Kyber}) \]
-This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber-512's low computational footprint with AVX2 (38 ms for KeyGen, 54 ms for Encapsulation), adding it to an existing ECC handshake (98 ms KeyGen, 96 ms Exchange) introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
+This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. A hybrid handshake would require both ECC (98 ms KeyGen + 96 ms Exchange = 194 ms) and Kyber-512 (38 ms KeyGen + 54 ms Encapsulation = 92 ms) for a total of approximately 286 ms. Compared to ECC-only deployment, this represents only a 47\% increase in handshake time while providing quantum resistance, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
 
 Without SIMD optimization, the computational overhead of a hybrid approach becomes more substantial, as non-optimized Kyber-512 would add 71 ms + 107 ms = 178 ms to the ECC baseline of 193 ms, roughly doubling handshake time. This further emphasizes the importance of SIMD support for practical deployment.
 
@@ -222,4 +222,4 @@ Future research must focus on optimizing polynomial multiplication for scalar ar
 
 To ensure the reliability of these performance claims, our experimental methodology prioritized statistical significance over single-run metrics. The reported results represent the mean of $N=1000$ iterations for each security level, minimizing the impact of background factors.
 
-The distribution analysis of these iterations indicates that Kyber-512 exhibits a lower standard deviation in execution time compared to ECC. This high degree of deterministic performance is attributed to the constant-time nature of the underlying lattice operations (matrix-vector multiplication and NTT), which lack the conditional branching often found in unoptimized ECC point multiplication. For real-time systems requiring predictable execution times, Kyber offers better operational stability.
+The multiple iterations reveal consistent timing characteristics for both algorithms. Kyber's lattice operations (matrix-vector multiplication and NTT) follow regular computational patterns without data-dependent branching, while ECC point operations involve modular arithmetic with variable execution paths. For real-time systems requiring predictable execution times, both algorithms demonstrate acceptable consistency when implemented with constant-time techniques.

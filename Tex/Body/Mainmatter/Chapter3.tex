@@ -110,7 +110,7 @@ The implementation provides three main cryptographic operations \cite{Kyber-Spec
 \textbf{Decapsulation (Decaps):} Uses secret key to decrypt ciphertext, recovers message with error correction, derives shared secret, and performs implicit rejection for CCA security.
 \section{SIMD Optimizations}
 
-Kyber's operations are highly parallelizable, making them well-suited for SIMD (Single Instruction, Multiple Data) optimizations. Modern CPUs support SIMD instruction sets like AVX2, which can process multiple data points in parallel within a single CPU cycle. While Python does not natively support SIMD, we implemented the performance-critical polynomial arithmetic in C, leveraging AVX2 instructions for acceleration.
+Kyber's operations are highly parallelizable, making them well-suited for SIMD (Single Instruction, Multiple Data) optimizations. Modern CPUs support SIMD instruction sets like AVX2, which can process multiple data points in parallel within a single CPU cycle \cite{intel_sdm}. While Python does not natively support SIMD, we implemented the performance-critical polynomial arithmetic in C, leveraging AVX2 instructions for acceleration.
 
 The C implementation uses AVX2 (Advanced Vector Extensions 2) to vectorize critical operations:
 
@@ -164,14 +164,14 @@ The server never participates in cryptographic computations—it only relays pub
 For Kyber-based key exchange between two clients:
 
 \begin{enumerate}
-\item Client 1 (receiver) generates Kyber key pair and sends public key to server
+\item Client 1 (receiver) generates public-private key pair and sends public key to server
 \item Server caches and forwards Client 1's public key to all connected clients
 \item Client 2 (sender) receives Client 1's public key from server
-\item Client 2 performs encapsulation using Client 1's public key, producing ciphertext and shared secret
+\item Client 2 performs encapsulation using Client 1's public key, producing ciphertext and secret
 \item Client 2 sends ciphertext to server via \texttt{HEADER\_KYBER\_CAPSULE} message
 \item Server forwards ciphertext to Client 1
-\item Client 1 decapsulates ciphertext using their private key to recover the same shared secret
-\item Both clients independently derive the same AES encryption key from the shared secret
+\item Client 1 decapsulates ciphertext using their private key to recover the secret
+\item Both clients independently derive the same AES encryption key one from generation, one from decapsulation.
 \end{enumerate}
 
 As with ECC, the server acts purely as a message broker without performing any cryptographic operations. This design demonstrates that post-quantum key exchange can be deployed in existing client-server architectures without requiring server-side cryptographic upgrades.
