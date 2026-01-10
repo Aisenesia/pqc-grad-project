@@ -1,5 +1,4 @@
 EDIT:   1. Add more shor and qkd (quantum approach), Reduce SIMD.
-EDIT:    3.4 Belki simd yanında, multithreadeddan bahsedilebilir, kyber emberrassingly parallel.
 EDIT:    3.6, daha generic olabilir mi bilemedim?, lib.py lib.cnin lib olduğuna dikkat çekmek mantıklı, lib.py içerisinde testler de var.
 EDIT:    4.2.1, Simd olmayan halleri tabloya eklenebilir (eklenirse yazının da değişmesi lazım), yüzdeler verilen sayılar vs kontrol edilmeli
 EDIT:   5.3. lattice VE LWE muhabbeti, lwe eklenmeli. C için Kyber paramları vs, biraz sıkıntı çıkardı, serverı maintain etmek sıkıntılıydı.

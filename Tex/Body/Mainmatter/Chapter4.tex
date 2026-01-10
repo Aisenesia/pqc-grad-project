@@ -16,7 +16,7 @@ The performance comparison script (performance\_comparison.py) executes multiple
 
 \subsection{Execution Time Comparison}
 
-Table \ref{tab:exec-time} shows the mean execution times for various cryptographic operations with SIMD-optimized implementations:
+Table \ref{tab:exec-time} compares the execution times across all implementations, demonstrating the progression from baseline to optimized code:
 
 \begin{table}[!htbp]
 \centering
@@ -24,18 +24,44 @@ Table \ref{tab:exec-time} shows the mean execution times for various cryptograph
 \begin{tabular}{l|r|r}
 \hline
 \textbf{Algorithm} & \textbf{Key Generation} & \textbf{Exchange/Encapsulation} \\ \hline
-ECC (secp256k1) & 151.84 & 154.55 \\
-Kyber-512 & 62.38 & 87.50 \\
-Kyber-768 & 117.75 & 149.01 \\
-Kyber-1024 & 191.46 & 226.26 \\ \hline
+ECC (secp256k1) & 97.76 & 95.62 \\
+Kyber-512 (no SIMD) & 70.54 & 107.15 \\
+Kyber-512 (AVX2) & \textbf{37.75} & \textbf{54.37} \\
+Kyber-768 (no SIMD) & 128.44 & 172.85 \\
+Kyber-768 (AVX2) & 72.45 & 92.43 \\
+Kyber-1024 (no SIMD) & 199.47 & 252.12 \\
+Kyber-1024 (AVX2) & 117.47 & 140.50 \\ \hline
 \end{tabular}
 \end{table}
 
-Remarkably, Kyber-512 demonstrates superior performance compared to ECC, with key generation taking only 62.38 ms (compared to ECC's 151.84 ms) and encapsulation completing in 87.50 ms. This represents a 59\% improvement in key generation speed and a 43\% improvement in key exchange operations.
+Without SIMD optimizations, Kyber-512 performs comparably to ECC in key generation (70.54 ms vs 97.76 ms) but slower in encapsulation (107.15 ms vs 95.62 ms). However, with AVX2 vectorization, Kyber-512 achieves 37.75 ms for key generation (2.6x faster than ECC) and 54.37 ms for encapsulation (1.8x faster than ECC).
+
+\subsection{SIMD Optimization Impact}
+
+Table \ref{tab:simd-speedup} quantifies the performance improvement gained from AVX2 vectorization:
+
+\begin{table}[!htbp]
+\centering
+\caption{\label{tab:simd-speedup}SIMD Speedup Analysis}
+\begin{tabular}{l|r|r|r}
+\hline
+\textbf{Algorithm} & \textbf{No SIMD (ms)} & \textbf{AVX2 (ms)} & \textbf{Speedup} \\ \hline
+\multicolumn{4}{c}{\textit{Key Generation}} \\ \hline
+Kyber-512 & 70.54 & 37.75 & 1.87x \\
+Kyber-768 & 128.44 & 72.45 & 1.77x \\
+Kyber-1024 & 199.47 & 117.47 & 1.70x \\ \hline
+\multicolumn{4}{c}{\textit{Encapsulation}} \\ \hline
+Kyber-512 & 107.15 & 54.37 & 1.97x \\
+Kyber-768 & 172.85 & 92.43 & 1.87x \\
+Kyber-1024 & 252.12 & 140.50 & 1.79x \\ \hline
+\end{tabular}
+\end{table}
+
+AVX2 optimizations provide consistent speedups ranging from 1.70x to 1.97x (average 1.83x), with encapsulation operations benefiting slightly more than key generation due to the intensive polynomial arithmetic in the NTT-based multiplication.
 
 \subsection{Performance Relative to ECC Baseline}
 
-Table \ref{tab:slowdown} presents the performance of each algorithm relative to ECC as the baseline:
+Table \ref{tab:slowdown} presents the performance of each algorithm relative to ECC:
 
 \begin{table}[!htbp]
 \centering
@@ -44,13 +70,16 @@ Table \ref{tab:slowdown} presents the performance of each algorithm relative to 
 \hline
 \textbf{Algorithm} & \textbf{Key Generation} & \textbf{Encapsulation} \\ \hline
 ECC (baseline) & 1.00x & 1.00x \\
-Kyber-512 & \textbf{0.41x} & \textbf{0.57x} \\
-Kyber-768 & 0.78x & 0.96x \\
-Kyber-1024 & 1.26x & 1.46x \\ \hline
+Kyber-512 (no SIMD) & 0.74x & 1.12x \\
+Kyber-512 (AVX2) & \textbf{0.39x} & \textbf{0.57x} \\
+Kyber-768 (no SIMD) & 1.34x & 1.80x \\
+Kyber-768 (AVX2) & 0.74x & 0.97x \\
+Kyber-1024 (no SIMD) & 2.08x & 2.63x \\
+Kyber-1024 (AVX2) & 1.20x & 1.47x \\ \hline
 \end{tabular}
 \end{table}
 
-Values below 1.0x indicate faster performance than ECC. Notably, Kyber-512 outperforms ECC across all operations, demonstrating that post-quantum cryptography can achieve superior performance with proper optimization.
+Values below 1.0x indicate faster performance than ECC. Without SIMD, Kyber-512 key generation outperforms ECC (0.74x), while encapsulation lags slightly behind (1.12x). With AVX2, Kyber-512 and Kyber-768 comprehensively outperform or match ECC, demonstrating that SIMD vectorization is the critical enabler of competitive post-quantum performance.
 
 \section{Key Size Comparison}
 
@@ -78,45 +107,58 @@ Table \ref{tab:memory} shows peak memory consumption during cryptographic operat
 \caption{\label{tab:memory}Peak Memory Usage (MB)}
 \begin{tabular}{l|r|r}
 \hline
-\textbf{Algorithm} & \textbf{Key Generation} & \textbf{Exchange/Encapsulation} \\ \hline
+\textbf{Algorithm} & \textbf{Key Generation (SIMD)} & \textbf{Encapsulation (SIMD)} \\ \hline
 ECC & 0.00 & 0.00 \\
 Kyber-512 & 0.11 & 0.13 \\
 Kyber-768 & 0.18 & 0.20 \\
-Kyber-1024 & 0.27 & 0.29 \\ \hline
+Kyber-1024 & 0.28 & 0.29 \\ \hline
 \end{tabular}
 \end{table}
 
-Memory usage remains modest across all implementations, with even Kyber-1024 requiring less than 0.3 MB for operations—well within the capabilities of resource-constrained devices.
+Memory usage remains modest across all implementations, with even Kyber-1024 requiring approximately 0.3 MB for operations—well within the capabilities of resource-constrained devices.
 
 \section{Analysis and Discussion}
 
-\subsection{Kyber-512 Performance Advantage}
+\subsection{The Critical Role of SIMD Optimization}
 
-The benchmark results reveal a surprising finding: Kyber-512 with AVX2 SIMD optimizations achieves superior performance compared to ECC across all operations. Key generation is 2.4x faster (41\% of ECC time), and encapsulation is 1.8x faster (57\% of ECC time). This demonstrates that post-quantum cryptography is not only viable but can actually outperform classical algorithms with proper optimization.
+The benchmark results demonstrate that SIMD vectorization is the decisive factor in Kyber's competitive performance. Table \ref{tab:simd-speedup} reveals that AVX2 optimizations provide 1.70x to 1.97x speedups, transforming Kyber from merely competitive to superior in performance compared to ECC.
+
+Without SIMD, Kyber-512 shows mixed results: key generation is faster than ECC (0.74x), but encapsulation is 12\% slower (1.12x). The transition from standard C to AVX2-optimized C yields the critical performance breakthrough, enabling Kyber-512 to achieve 0.39x (2.6x faster) key generation and 0.57x (1.8x faster) encapsulation compared to ECC.
+
+Key optimization techniques employed:
+\begin{itemize}
+\item Vectorized Number Theoretic Transform (NTT) for polynomial multiplication
+\item Parallel coefficient reduction using AVX2 instructions processing 16 coefficients simultaneously
+\item Optimized memory access patterns to maximize cache efficiency
+\item Loop unrolling and aggressive compiler optimizations
+\end{itemize}
+
+The polynomial operations in Kyber are inherently parallelizable—matrix-vector multiplications operate on independent coefficients, and NTT computations follow a butterfly pattern amenable to vectorization. This architectural match between algorithm and hardware is what enables the observed speedups.
 
 \subsection{Performance Scaling Across Security Levels}
 
 As security levels increase, performance characteristics change:
 
 \begin{itemize}
-\item \textbf{Kyber-512:} Fastest option, 0.41x-0.57x ECC baseline (quantum-resistant equivalent to AES-128)
-\item \textbf{Kyber-768:} Balanced performance, 0.78x-0.96x ECC baseline (quantum-resistant equivalent to AES-192)
-\item \textbf{Kyber-1024:} Highest security, 1.26x-1.46x ECC baseline (quantum-resistant equivalent to AES-256)
+\item \textbf{Kyber-512:} Fastest option, 0.39x-0.57x ECC baseline with SIMD (quantum-resistant equivalent to AES-128 and secp256k1)
+\item \textbf{Kyber-768:} Balanced performance, 0.74x-0.97x ECC baseline with SIMD (quantum-resistant equivalent to AES-192 and secp384r1)
+\item \textbf{Kyber-1024:} Highest security, 1.20x-1.47x ECC baseline with SIMD (quantum-resistant equivalent to AES-256 and secp521r1)
 \end{itemize}
 
-For most applications, Kyber-512 provides adequate security with the best performance characteristics.
+For most applications, Kyber-512 provides adequate security (128-bit, matching widely-deployed secp256k1) with superior performance characteristics when SIMD-optimized.
 
-\subsection{The Importance of SIMD Optimization}
+\subsection{Hardware Dependencies and Portability}
 
-The performance advantage of Kyber over ECC is entirely attributable to SIMD optimizations. Without AVX2 acceleration, pure Python implementations show Kyber to be 1.7-2.1x slower than with SIMD (average speedup of 1.92x across all operations). The polynomial operations in Kyber are inherently parallelizable, making them ideal for SIMD vectorization.
-
-Key optimization techniques employed:
+The performance advantage of Kyber is entirely dependent on AVX2 availability. The reported speedups rely on x86-64 processors with AVX2 support, which are standard in modern server and desktop systems but may be absent in:
 \begin{itemize}
-\item Vectorized Number Theoretic Transform (NTT) for polynomial multiplication
-\item Parallel coefficient reduction using AVX2 instructions
-\item Optimized memory access patterns to maximize cache efficiency
-\item Loop unrolling and aggressive compiler optimizations
+\item Legacy x86 systems (pre-2013 processors)
+\item Embedded ARM devices without NEON equivalent optimizations
+\item IoT microcontrollers with limited instruction sets
 \end{itemize}
+
+On platforms lacking SIMD support, Kyber's performance profile changes significantly. Without AVX2, Kyber-512 key generation remains competitive (0.74x), but encapsulation becomes slower than ECC (1.12x). Higher security levels (Kyber-768, Kyber-1024) show substantial slowdowns without SIMD (1.34x-2.63x), making them less attractive for resource-constrained deployments.
+
+This hardware dependency implies that migration strategies must account for the target platform's capabilities. Server-side implementations can leverage AVX2 to achieve superior performance, while client-side deployments on diverse hardware may require fallback strategies or alternative optimizations.
 
 \subsection{Bandwidth Trade-offs}
 
@@ -143,23 +185,38 @@ The transition from classical algorithms to Post-Quantum Cryptography represents
 
 \subsection{Latency and Throughput Trade-offs}
 
-Interestingly, data shows that post-quantum security does not necessarily come with a performance penalty. While Kyber introduces a significant increase in bandwidth usage (approximately 23x overhead for Kyber-512 relative to ECC), the reduction in computational cost offsets this transmission overhead in many scenarios.
+The data shows that post-quantum security with proper optimization does not necessarily come with a performance penalty. While Kyber introduces a significant increase in bandwidth usage (approximately 23.8x overhead for Kyber-512 relative to ECC), the reduction in computational cost with AVX2 offsets this transmission overhead in many scenarios.
 
-Our results indicate that Kyber-512 reduces the computational latency of the handshake process by roughly 41-43\% compared to secp256k1. For high-bandwidth environments, this computational speedup results in a lower handshake time. However, in bandwidth-constrained environments (e.g., IoT/LoRaWAN), the transmission time for keys may become the bottleneck. Systems migrating to Kyber must therefore account for Maximum Transmission Unit (MTU) fragmentation, as Kyber keys and ciphertexts exceed the standard Ethernet MTU of 1500 bytes, potentially requiring packet fragmentation handling at the network layer \cite{Paquin2020}.
+AVX2-optimized Kyber-512 reduces the computational latency of the handshake process by approximately 61-43\% compared to secp256k1 (key generation and encapsulation respectively). For high-bandwidth environments, this computational speedup results in lower overall handshake time despite larger key sizes. However, in bandwidth-constrained environments (e.g., IoT/LoRaWAN), the transmission time for keys may become the bottleneck.
+
+Without SIMD support, the tradeoff shifts unfavorably. Standard C implementations of Kyber-512 show computational advantage for key generation (0.74x) but a disadvantage for encapsulation (1.12x), making the bandwidth overhead harder to justify. This reinforces that SIMD capability is essential for practical Kyber deployment.
+
+Systems migrating to Kyber must account for Maximum Transmission Unit (MTU) fragmentation, as Kyber keys and ciphertexts exceed the standard Ethernet MTU of 1500 bytes, potentially requiring packet fragmentation handling at the network layer \cite{Paquin2020}.
 
 \subsection{Hybrid Implementation Strategies}
 
-Immediate replacement of classical algorithms with Kyber is generally not recommended due to the relative development of lattice-based cryptography compared to ECC. A hybrid deployment is the standard migration path endorsed by security bodies including NIST and BSI.
+Immediate replacement of classical algorithms with Kyber is generally not recommended due to the relative newness of lattice-based cryptography compared to ECC. A hybrid deployment is the standard migration path endorsed by security bodies including NIST and BSI.
 
 In a hybrid scheme, the final shared secret is derived from both an ECC key exchange and a Kyber encapsulation:
 \[ K_{final} = \text{KDF}(K_{ECC} || K_{Kyber}) \]
-This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber's low computational footprint (approx. 62ms for KeyGen), adding it to an existing ECC handshake introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
+This approach ensures that security remains at least as strong as the classical baseline even if a vulnerability is later discovered in the lattice construction. While our benchmarks treated Kyber as a standalone replacement, real-world deployment would likely incorporate both schemes. Given Kyber-512's low computational footprint with AVX2 (38 ms for KeyGen, 54 ms for Encapsulation), adding it to an existing ECC handshake (98 ms KeyGen, 96 ms Exchange) introduces minimal latency overhead, making hybrid adoption practically viable \cite{Bernstein2017,Paquin2020}.
+
+Without SIMD optimization, the computational overhead of a hybrid approach becomes more substantial, as non-optimized Kyber-512 would add 71 ms + 107 ms = 178 ms to the ECC baseline of 193 ms, roughly doubling handshake time. This further emphasizes the importance of SIMD support for practical deployment.
 
 \subsection{Hardware Dependencies and Optimization Constraints}
 
-Our benchmarks revealed that Kyber's performance advantage is heavily dependent on specific instruction set architectures. The reported speedups (0.41x slowdown factor vs ECC for Kyber-512) rely on the vectorization of polynomial operations in the Ring-$R_q$.
+Our benchmarks revealed that Kyber's performance advantage is heavily dependent on specific instruction set architectures. The reported speedups (0.39x-0.57x vs ECC for Kyber-512) rely on AVX2 vectorization of polynomial operations in the Ring-$R_q$.
 
-The reliance on AVX2 instructions for the Number Theoretic Transform (NTT) implies that performance is consistent on modern x86-64 server hardware but may degrade significantly on legacy platforms or embedded architectures lacking SIMD support. Future research must focus on optimizing polynomial multiplication for scalar architectures to ensure consistent performance across diverse networks. This hardware dependency suggests that during the migration phase, server-side hardware capability adjustments are necessary for enabling Kyber \cite{Kyber-Spec,Botros2020}.
+The reliance on AVX2 instructions for the Number Theoretic Transform (NTT) implies that performance is consistent on modern x86-64 server hardware (post-2013) but degrades significantly on platforms lacking SIMD support. Table \ref{tab:slowdown} demonstrates this bifurcation: with AVX2, Kyber-512 achieves 0.39x-0.57x performance relative to ECC, but without SIMD, it shows 0.74x-1.12x performance.
+
+This hardware dependency has deployment implications:
+\begin{itemize}
+\item \textbf{Server-side:} Modern x86-64 infrastructure with AVX2 support can deploy Kyber with performance gains
+\item \textbf{Client-side:} Diverse hardware ecosystem requires fallback strategies for devices lacking SIMD
+\item \textbf{Embedded systems:} ARM architectures need NEON-optimized implementations; scalar C performance may be insufficient
+\end{itemize}
+
+Future research must focus on optimizing polynomial multiplication for scalar architectures to ensure consistent performance across diverse hardware platforms \cite{Kyber-Spec,Botros2020}.
 
 \subsection{Operational Stability and Statistical Consistency}
 
