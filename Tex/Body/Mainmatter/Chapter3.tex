@@ -108,26 +108,12 @@ The implementation provides three main cryptographic operations \cite{Kyber-Spec
 \textbf{Encapsulation (Encaps):} Takes public key, samples fresh randomness and error terms, produces ciphertext $(\mathbf{u}, v)$ and shared secret via key derivation.
 
 \textbf{Decapsulation (Decaps):} Uses secret key to decrypt ciphertext, recovers message with error correction, derives shared secret, and performs implicit rejection for CCA security.
-\section{SIMD Optimizations}
 
-Kyber's operations are highly parallelizable, making them well-suited for SIMD (Single Instruction, Multiple Data) optimizations. Modern CPUs support SIMD instruction sets like AVX2, which can process multiple data points in parallel within a single CPU cycle \cite{intel_sdm}. While Python does not natively support SIMD, we implemented the performance-critical polynomial arithmetic in C, leveraging AVX2 instructions for acceleration.
+\section{Implementation Approach}
 
-The C implementation uses AVX2 (Advanced Vector Extensions 2) to vectorize critical operations:
+Our implementation uses pure Python with NumPy for numerical operations. While Python is not traditionally known for high-performance cryptographic implementations, it provides excellent readability and maintainability for educational purposes. The implementation focuses on correctness and clarity of the mathematical operations rather than raw performance.
 
-\begin{itemize}
-\item \textbf{Vectorized NTT:} Process multiple coefficients simultaneously using 256-bit vector operations
-\item \textbf{Polynomial Arithmetic:} Vectorized addition, subtraction, and coefficient-wise operations
-\end{itemize}
-
-The library is compiled with the \texttt{/arch:AVX2} flag, which generates AVX2 instructions throughout the code. The compiled binary uses AVX2 instructions statically; there is no runtime detection or fallback to non-SIMD code paths. This design assumes testing and compiling on the same machine.
-
-The compilation command used is:
-
-\begin{verbatim}
-cl /LD /O2 /W3 /arch:AVX2 lib.c /link /OUT:lib.dll
-\end{verbatim}
-
-The \texttt{/O2} flag enables aggressive optimizations including loop unrolling, function inlining, and compiler-driven vectorization of suitable code patterns beyond explicit SIMD intrinsics.
+All polynomial arithmetic, NTT transformations, and modular operations are implemented using NumPy arrays and standard Python operations, ensuring the code is accessible for learning and verification purposes. This approach allows for straightforward debugging and modification while maintaining reasonable performance for demonstration and testing scenarios.
 
 \section{Protocol Design}
 

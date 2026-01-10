@@ -5,24 +5,24 @@
 This project implemented and evaluated post-quantum cryptography alongside classical cryptographic systems. The contributions are:
 
 \begin{enumerate}
-\item Implemented ECC (secp256k1) and CRYSTALS-Kyber (Kyber-512) with key generation, key exchange, and encapsulation/decapsulation operations.
-
-\item Demonstrated SIMD optimization impact on post-quantum algorithms, achieving 1.7-2.1× performance improvements through AVX2 vectorization (average speedup of 1.92×).
+\item Implemented ECC (secp256k1) and CRYSTALS-Kyber (Kyber-512, Kyber-768, Kyber-1024) with key generation, key exchange, and encapsulation/decapsulation operations in pure Python.
 
 \item Built a client-server system with real-time visualization demonstrating practical deployment of both cryptographic approaches.
 
-\item Provided performance benchmarks comparing classical and post-quantum implementations under differently optimized circumstances.
+\item Provided performance benchmarks comparing classical and post-quantum implementations, identifying key performance characteristics and bottlenecks.
+
+\item Conducted extensive research into SIMD optimization strategies for post-quantum cryptography, documenting challenges and lessons learned for future implementation efforts.
 \end{enumerate}
 
 \section{Key Findings}
 
 The most important findings from this project are:
 
-\textbf{Quantum Resilience is Required:} The migration to post-quantum cryptography is not in distant future. With NIST's standardization of Kyber and other PQC algorithms, organizations should begin planning their transition strategies.
+\textbf{Quantum Resilience is Required:} The migration to post-quantum cryptography is not in the distant future. With NIST's standardization of Kyber and other PQC algorithms, organizations should begin planning their transition strategies.
 
-\textbf{Optimization is Critical:} Post-quantum algorithms like Kyber require careful optimization to achieve competitive performance. Without SIMD acceleration, Kyber is comparatively slower than ECC, but with proper optimization, it can match or exceed ECC performance.
+\textbf{Implementation Complexity:} Post-quantum algorithms like Kyber involve significantly more complex mathematical operations compared to ECC. The Number Theoretic Transform and polynomial arithmetic require careful implementation to ensure correctness.
 
-\textbf{Practical Deployment is Feasible:} Our client-server implementation demonstrates that post-quantum cryptography can be integrated into real-world systems without prohibitive complexity or performance costs.
+\textbf{Practical Deployment is Feasible:} Our client-server implementation demonstrates that post-quantum cryptography can be integrated into real-world systems. While performance optimization remains an area for improvement, the fundamental operations are practical for deployment.
 
 \section{Challenges Encountered}
 
@@ -33,12 +33,12 @@ During the development of this project, we encountered several challenges:
 
 \item Implementing the Number Theoretic Transform correctly required careful attention to modular arithmetic and domain conversions.
 
-\item Debugging SIMD code presented unique challenges due to the parallel nature of vector operations.
+\item Bridging Python and C for SIMD optimizations proved more challenging than anticipated. While we successfully implemented AVX2-accelerated polynomial operations in C, ensuring correct data exchange and domain conversion between Python (using standard modular arithmetic) and C (using Montgomery reduction) introduced subtle correctness issues that prevented successful integration.
 
 \item Ensuring constant-time implementations to prevent side-channel attacks required careful coding practices.
 \end{itemize}
 
-These challenges provided valuable learning experiences in both cryptography and systems programming.
+These challenges provided valuable learning experiences in both cryptography and systems programming. The SIMD optimization attempt, while unsuccessful in this iteration, provided deep insights into the complexities of hybrid Python-C implementations.
 
 \section{Future Work}
 
@@ -53,15 +53,39 @@ Implementing other NIST-selected post-quantum algorithms such as:
 \item SPHINCS+ for hash-based signatures
 \end{itemize}
 
-\subsection{Advanced Optimizations}
+\subsection{SIMD Optimizations}
 
-Further performance improvements could be achieved through:
+Significant performance improvements could be achieved through SIMD (Single Instruction, Multiple Data) vectorization using AVX2 or AVX-512 instructions. During this project, we conducted extensive research and implementation attempts for SIMD acceleration:
+
+\textbf{Research Conducted:}
 \begin{itemize}
+\item Implemented vectorized NTT operations using AVX2 intrinsics (256-bit vectors processing 16 coefficients simultaneously)
+\item Developed vectorized polynomial arithmetic (addition, subtraction, multiplication)
+\item Explored Montgomery reduction for efficient modular arithmetic in SIMD context
+\item Created both SIMD and non-SIMD versions for performance comparison
+\end{itemize}
+
+\textbf{Challenges Encountered:}
+
+The primary obstacle was bridging Python and C implementations while maintaining mathematical correctness:
+\begin{itemize}
+\item Python implementation uses standard modular arithmetic, while efficient C SIMD implementations benefit from Montgomery domain operations. Converting between domains at the Python-C boundary introduced subtle errors.
+\item Ensuring correct data representation and alignment when passing NumPy arrays to C through ctypes required careful handling.
+\item Verifying correctness of parallel vector operations is significantly more difficult than scalar code, especially when errors manifest as incorrect cryptographic outputs rather than crashes.
+\item While individual SIMD operations appeared correct in isolation, the end-to-end Kyber protocol failed validation tests, indicating subtle arithmetic inconsistencies.
+\end{itemize}
+
+This experience provides valuable insights for future SIMD implementation attempts and highlights the engineering challenges in optimizing post-quantum cryptography.
+
+\subsection{Additional Performance Optimizations}
+
+Beyond SIMD, further performance improvements could be achieved through:
+\begin{itemize}
+\item Pure C or Rust implementation eliminating Python overhead
 \item Assembly language implementations of critical functions
 \item GPU acceleration (CUDA, OpenCL) for batch operations
 \item Multithreaded parallel processing: Kyber operations are embarrassingly parallel, allowing simultaneous key generation and encapsulation for multiple sessions without inter-thread dependencies
-\item Edge Device optimizations for mobile platforms (ARM, RISC-V)
-\item Incorporating arithmetic optimizations (e.g., Barrett reduction, Montgomery multiplication etc.)
+\item Edge device optimizations for mobile platforms (ARM, RISC-V)
 \end{itemize}
 
 \subsection{Security Enhancements}

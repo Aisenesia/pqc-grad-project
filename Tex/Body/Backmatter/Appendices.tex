@@ -3,7 +3,7 @@
 
 \section*{Appendix 1: Complete Benchmark Data}
 
-All benchmarks were executed with $N=1000$ iterations on Windows 11 with Microsoft Visual C++ 2022 compiler using /O2 /arch:AVX2 flags.
+All benchmarks were executed with $N=1000$ iterations on Windows 11 using pure Python implementation with NumPy.
 
 \textbf{Statistical Summary:}
 
@@ -15,21 +15,21 @@ All benchmarks were executed with $N=1000$ iterations on Windows 11 with Microso
 \textbf{Algorithm/Operation} & \textbf{Mean} & \textbf{Min} & \textbf{Max} & \textbf{Std Dev} \\ \hline
 ECC KeyGen & 97.76 & - & - & - \\
 ECC Exchange & 95.62 & - & - & - \\
-Kyber-512 KeyGen (SIMD) & 37.75 & - & - & - \\
-Kyber-512 Encaps (SIMD) & 54.37 & - & - & - \\
-Kyber-512 KeyGen (no SIMD) & 70.54 & - & - & - \\
-Kyber-512 Encaps (no SIMD) & 107.15 & - & - & - \\ \hline
+Kyber-512 KeyGen & 70.54 & - & - & - \\
+Kyber-512 Encaps & 107.15 & - & - & - \\
+Kyber-768 KeyGen & 128.44 & - & - & - \\
+Kyber-768 Encaps & 172.85 & - & - & - \\
+Kyber-1024 KeyGen & 199.47 & - & - & - \\
+Kyber-1024 Encaps & 252.12 & - & - & - \\ \hline
 \end{tabular}
 \end{table}
 
 \textbf{Hardware Configuration:}
 
 \begin{itemize}
-\item \textbf{CPU:} x86-64 processor with AVX2 support
+\item \textbf{CPU:} x86-64 processor
 \item \textbf{OS:} Windows 11
-\item \textbf{Compiler:} MSVC 2022 (\_MSC\_VER 1900+)
-\item \textbf{Python:} 3.x with ctypes
-\item \textbf{Optimization Flags:} /O2 /arch:AVX2 /fp:fast
+\item \textbf{Python:} 3.x with NumPy
 \end{itemize}
 
 \section*{Appendix 2: Protocol Wire Format}
@@ -83,7 +83,7 @@ For HEADER\_HANDSHAKE packets:
 The complete source code for this project is available on GitHub:
 
 \begin{center}
-\texttt{https://github.com/Aisenesia/pqc-grad-project/tree/SIMD}
+\texttt{https://github.com/Aisenesia/pqc-grad-project}
 \end{center}
 
 The repository includes all implementation files, benchmarking scripts, client-server demonstration code, and the web-based visualization dashboard.
@@ -112,23 +112,11 @@ python client.py
 
 Access the web dashboard at \texttt{http://localhost:8080/dashboard/}.
 
-\textbf{Compilation:}
-
-Compile the C library with SIMD optimizations:
-\begin{verbatim}
-cl /O2 /arch:AVX2 /LD lib.c /Fe:lib.dll
-\end{verbatim}
-
-For non-SIMD baseline comparison:
-\begin{verbatim}
-cl /O2 /LD plain_lib.c /Fe:plain_lib.dll
-\end{verbatim}
-
 \textbf{Running Benchmarks:}
 
 Execute performance comparison with 1000 iterations:
 \begin{verbatim}
-python benchmark_comparison.py -n 1000 -o pytest.csv lib.py plain_lib.py
+python benchmark_comparison.py -n 1000
 \end{verbatim}
 
 Results are written to CSV files in the \texttt{pytest.csv/} directory.
