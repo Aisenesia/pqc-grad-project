@@ -146,29 +146,35 @@ Each message includes the header byte, message length, and payload data.
 
 \subsection{ECC Handshake Protocol}
 
-For ECC-based key exchange:
+The server acts as a relay broker, forwarding messages between clients. For ECC-based key exchange between two clients:
 
 \begin{enumerate}
-\item Client generates ephemeral key pair and sends public key to server
-\item Server receives client's public key
-\item Server generates its own key pair and computes shared secret
-\item Server sends its public key to client
-\item Client computes shared secret
-\item Both derive AES encryption key from shared secret using key derivation
+\item Client 1 generates ephemeral key pair and sends public key to server
+\item Server caches and forwards Client 1's public key to all connected clients
+\item Client 2 generates ephemeral key pair and sends public key to server
+\item Server caches and forwards Client 2's public key to all connected clients (including Client 1)
+\item Each client computes shared secret using their private key and the other client's public key
+\item Both clients independently derive the same AES encryption key from the shared secret
 \end{enumerate}
+
+The server never participates in cryptographic computations—it only relays public keys between clients. This architecture allows the server to coordinate multiple simultaneous handshakes without requiring cryptographic capabilities.
 
 \subsection{Kyber Handshake Protocol}
 
-For Kyber-based key exchange:
+For Kyber-based key exchange between two clients:
 
 \begin{enumerate}
-\item Client generates Kyber key pair and sends public key to server
-\item Server receives client's public key
-\item Server performs encapsulation, producing ciphertext and shared secret
-\item Server sends ciphertext to client
-\item Client decapsulates ciphertext to recover shared secret
-\item Both derive AES encryption key from shared secret
+\item Client 1 (receiver) generates Kyber key pair and sends public key to server
+\item Server caches and forwards Client 1's public key to all connected clients
+\item Client 2 (sender) receives Client 1's public key from server
+\item Client 2 performs encapsulation using Client 1's public key, producing ciphertext and shared secret
+\item Client 2 sends ciphertext to server via \texttt{HEADER\_KYBER\_CAPSULE} message
+\item Server forwards ciphertext to Client 1
+\item Client 1 decapsulates ciphertext using their private key to recover the same shared secret
+\item Both clients independently derive the same AES encryption key from the shared secret
 \end{enumerate}
+
+As with ECC, the server acts purely as a message broker without performing any cryptographic operations. This design demonstrates that post-quantum key exchange can be deployed in existing client-server architectures without requiring server-side cryptographic upgrades.
 
 \section{Visualization Dashboard}
 
