@@ -149,13 +149,15 @@ The Kyber algorithm implements a Key Encapsulation Mechanism (KEM) through three
 
 \section{Security Parameters and Variants}
 
-Both ECC and post-quantum algorithms offer multiple security levels to balance security requirements with performance. Security levels are measured in bits of security, representing the computational effort required to break the cryptosystem.
+Both ECC and post-quantum algorithms offer multiple security levels to balance security requirements with performance. Security levels are measured in bits of security, representing the computational effort required to break the cryptosystem. NIST defines security strength categories that provide a standardized way to compare cryptographic algorithms across different families \cite{NISTSP800-57,NIST-PQC-Levels}.
 
-Common security levels and their implementations:
+NIST's post-quantum cryptography standardization process explicitly defines security levels 1, 3, and 5, corresponding to the computational resources required to break AES-128, AES-192, and AES-256 respectively \cite{NIST-PQC-Levels}. Common security levels and their implementations:
 \begin{itemize}
-\item \textbf{128-bit security:} Kyber-512 ($k=2$), secp256k1/secp256r1 (256-bit ECC), comparable to AES-128
-\item \textbf{192-bit security:} Kyber-768 ($k=3$), secp384r1 (384-bit ECC), comparable to AES-192
-\item \textbf{256-bit security:} Kyber-1024 ($k=4$), secp521r1 (521-bit ECC), comparable to AES-256
+\item \textbf{128-bit security (NIST Level 1):} Kyber-512 ($k=2$), secp256k1/secp256r1 (256-bit ECC), comparable to AES-128
+\item \textbf{192-bit security (NIST Level 3):} Kyber-768 ($k=3$), secp384r1 (384-bit ECC), comparable to AES-192
+\item \textbf{256-bit security (NIST Level 5):} Kyber-1024 ($k=4$), secp521r1 (521-bit ECC), comparable to AES-256
 \end{itemize}
 
-While ECC and Kyber provide comparable security against classical attacks, Kyber maintains its security in the post-quantum era, whereas ECC is vulnerable to Shor's algorithm. Other standardized curves exist (e.g., secp192r1, secp224r1) but are less commonly deployed. This project implements secp256k1 and Kyber variants, using kyber-512 as the default, both providing 128-bit security with Kyber offering quantum resistance.
+The Kyber specification defines these parameter sets to target specific NIST security levels \cite{Kyber-Spec}, while NIST SP 800-57 provides equivalent security strength comparisons for ECC key sizes relative to symmetric algorithms \cite{NISTSP800-57}.
+
+While ECC and Kyber provide comparable security against classical attacks, Kyber maintains its security in the post-quantum era, whereas ECC is vulnerable to Shor's algorithm \cite{Shor1997}. Other standardized curves exist (e.g., secp192r1, secp224r1) but are less commonly deployed \cite{SEC1}. This project implements secp256k1 and Kyber variants, using kyber-512 as the default, both providing 128-bit security with Kyber offering quantum resistance.
