@@ -10,12 +10,3 @@ EDIT: Bibliography, shit ton of referance lazim, ungodly amounts of referance, v
 GENEL EDIT: Bahsedilen bilgilerin referanslarına göre belirtilmeleri lazım kullanılan yerlerde (e.g. Kyber anlatılan yerde nist in kyber spesifikasyonu) (Çoğunlukla yapıldı)
 
 GENEL EDIT2: Wording, diğer editler yapılırken göze çarpan kısımlar törpülensin, ayrıca sonda baştan sona okunup wording düzenlemesi yapılacak.
-
-
-Hakan Additional not:
-1.1. Referanslar, RSA ve ECC referansı eklenebilir, Quantum Bilgisayalar gelişiyor?, nasıl biliyoruz? refereans. tangible? primary algorithm? (Çoğunlukla yapıldı)
-1.2 underpinnings?
-
-
-2.4.1. Figur eklenebilir, Grid, ve latticei showcaselemesi lazım.
-2.5. ECC eklenecek

@@ -149,13 +149,13 @@ The Kyber algorithm implements a Key Encapsulation Mechanism (KEM) through three
 
 \section{Security Parameters and Variants}
 
-CRYSTALS-Kyber is parameterized by a value $k$ that determines the dimension of the polynomial matrices used in the algorithm. Larger values provide higher security but require more computation and larger key sizes \cite{NIST-Selection}.
+Both ECC and post-quantum algorithms offer multiple security levels to balance security requirements with performance. Security levels are measured in bits of security, representing the computational effort required to break the cryptosystem.
 
-Kyber comes in three security levels, where the numeric suffix indicates the dimension parameter:
+Common security levels and their implementations:
 \begin{itemize}
-\item \textbf{Kyber-512} ($k=2$): Security comparable to AES-128, classified as NIST Security Level 1 (128-bit classical security)
-\item \textbf{Kyber-768} ($k=3$): Security comparable to AES-192, classified as NIST Security Level 3 (192-bit classical security)
-\item \textbf{Kyber-1024} ($k=4$): Security comparable to AES-256, classified as NIST Security Level 5 (256-bit classical security)
+\item \textbf{128-bit security:} Kyber-512 ($k=2$), secp256k1/secp256r1 (256-bit ECC), comparable to AES-128
+\item \textbf{192-bit security:} Kyber-768 ($k=3$), secp384r1 (384-bit ECC), comparable to AES-192
+\item \textbf{256-bit security:} Kyber-1024 ($k=4$), secp521r1 (521-bit ECC), comparable to AES-256
 \end{itemize}
 
-These security levels are defined by NIST to match the computational effort required to break standard symmetric algorithms like AES \cite{NIST-PQC}. This project implements Kyber-512 as it provides adequate security for most applications while offering better performance than higher security levels.
+While ECC and Kyber provide comparable security against classical attacks, Kyber maintains its security in the post-quantum era, whereas ECC is vulnerable to Shor's algorithm. Other standardized curves exist (e.g., secp192r1, secp224r1) but are less commonly deployed. This project implements secp256k1 and Kyber variants, using kyber-512 as the default, both providing 128-bit security with Kyber offering quantum resistance.
