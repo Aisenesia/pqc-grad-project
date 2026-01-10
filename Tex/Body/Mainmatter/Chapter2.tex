@@ -6,7 +6,7 @@ A cryptographic handshake is a process by which two parties establish a shared s
 
 \subsection{Key Exchange Fundamentals}
 
-The challenge of key exchange was famously solved by Diffie and Hellman in 1976, introducing the concept of public-key cryptography. In a typical key exchange protocol:
+The challenge of key exchange was solved by Diffie and Hellman in 1976 \cite{Diffie1976}, introducing the concept of public-key cryptography. In a typical key exchange protocol:
 
 \begin{enumerate}
 \item Each party generates a public-private key pair
@@ -27,7 +27,7 @@ where $p$ is a large prime number, and $a, b$ are curve parameters satisfying $4
 
 \subsection{The secp256k1 Curve}
 
-This project implements the secp256k1 curve, which is widely used in Bitcoin and other cryptocurrencies \cite{Koblitz1994}. The curve parameters are:
+This project implements the secp256k1 curve, which is widely used in Bitcoin and other cryptocurrencies \cite{SEC2}. The curve parameters are:
 \begin{itemize}
 \item Prime: $p = 2^{256} - 2^{32} - 977$
 \item Curve coefficients: $a = 0, b = 7$ (making the equation $y^2 = x^3 + 7$)
@@ -105,7 +105,7 @@ The security of Kyber is based on the hardness of the Module Learning With Error
 
 Given a matrix $\mathbf{A}$ of polynomials and a vector $\mathbf{b} = \mathbf{A} \cdot \mathbf{s} + \mathbf{e}$, where $\mathbf{s}$ is a secret and $\mathbf{e}$ is small error (noise), it is computationally hard to recover $\mathbf{s}$ even with a quantum computer. The noise term $\mathbf{e}$ represents intentional errors that obscure the algebraic structure, converting what would be a simple linear algebra problem into a lattice problem.
 
-The "Module" variant uses structured polynomial rings instead of arbitrary matrices, reason being using polynomials allows us to represent high dimensional lattice structures more efficiently while maintaining security through proper parameter selection. The hardness of Module-LWE reduces to solving worst-case lattice problems, meaning an attacker who can break Module-LWE could also solve previously mentioned lattice problems \cite{Langlois2015}.
+The "Module" variant uses structured polynomial rings instead of arbitrary matrices, reason being using polynomials allows us to represent high dimensional lattice structures more efficiently while maintaining security through proper parameter selection. While Regev established the hardness of standard LWE \cite{Regev2009}, the hardness of Module-LWE reduces to solving worst-case lattice problems, meaning an attacker who can break Module-LWE could also solve previously mentioned lattice problems \cite{Langlois2015}.
 
 \subsection{Polynomial Rings}
 

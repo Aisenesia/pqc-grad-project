@@ -67,7 +67,7 @@ The NTT transforms polynomial multiplication in the coefficient domain into poin
 
 \subsection{Extendable Output Functions (XOF)}
 
-Kyber uses SHAKE-128, a member of the SHA-3 family, as an extendable output function (XOF) for generating pseudorandom data. Unlike traditional hash functions with fixed output length, XOFs can produce arbitrary-length outputs from a given seed.
+Kyber uses SHAKE-128, a member of the SHA-3 family \cite{FIPS202}, as an extendable output function (XOF) for generating pseudorandom data. Unlike traditional hash functions with fixed output length, XOFs can produce arbitrary-length outputs from a given seed.
 
 The primary application is generating the public matrix $\mathbf{A}$:
 \begin{itemize}
