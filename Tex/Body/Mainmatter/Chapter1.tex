@@ -2,11 +2,11 @@
 
 \section{Background and Motivation}
 
-The security of modern digital communications relies heavily on cryptographic algorithms that are based on mathematical problems considered computationally intractable for classical computers. Public-key cryptography systems such as RSA (Rivest-Shamir-Adleman) and Elliptic Curve Cryptography (ECC) have been the backbone of secure internet communications for decades, protecting everything from web browsing to financial transactions.
+The security of modern digital communications relies heavily on cryptographic algorithms that are based on mathematical problems considered computationally intractable for classical computers. Public-key cryptography systems such as RSA (Rivest-Shamir-Adleman) \cite{RSA1978} and Elliptic Curve Cryptography (ECC) \cite{Miller1985,Koblitz1987} have been the backbone of secure internet communications for decades, protecting everything from web browsing to financial transactions.
 
-However, the emergence of quantum computing poses an existential threat to these cryptographic foundations. In 1994, Peter Shor developed a quantum algorithm capable of efficiently solving both the integer factorization problem and the discrete logarithm problem—the very mathematical assumptions underlying RSA and ECC \cite{Shor1997}. While large-scale quantum computers do not yet exist, rapid progress in quantum hardware development has made the threat increasingly tangible.
+However, the emergence of quantum computing poses an existential threat to these cryptographic foundations. In 1994, Peter Shor developed a quantum algorithm capable of efficiently solving both the integer factorization problem and the discrete logarithm problem—the mathematical assumptions underlying RSA and ECC \cite{Shor1997}. While large-scale quantum computers do not yet exist, recent advancements in the quantum field \cite{Arute2019} and continued hardware improvements make the threat increasingly concrete.
 
-In response to this challenge, the cryptographic community has been developing post-quantum cryptography (PQC)—cryptographic algorithms designed to be secure against both classical and quantum computers. In 2016, the National Institute of Standards and Technology (NIST) initiated a standardization process to identify and standardize post-quantum cryptographic algorithms \cite{NIST-PQC}. After multiple rounds of evaluation, CRYSTALS-Kyber was selected in 2022 as the primary algorithm for public-key encryption and key establishment.
+In response to this challenge, the cryptographic community has been developing post-quantum cryptography (PQC)—cryptographic algorithms designed to be secure against both classical and quantum computers. In 2016, the National Institute of Standards and Technology (NIST) initiated a standardization process to identify and standardize post-quantum cryptographic algorithms \cite{NIST-PQC}. After multiple rounds of evaluation, CRYSTALS-Kyber was selected in 2022 as the primary algorithm for key encapsulation mechanisms \cite{NIST-Selection}.
 
 \section{Project Objectives}
 
@@ -15,7 +15,7 @@ The primary objectives of this graduation project are:
 \begin{enumerate}
 \item \textbf{Theoretical Understanding:} To gain comprehensive knowledge of cryptographic handshake protocols, classical public-key cryptography (specifically ECC), and post-quantum cryptography (focusing on CRYSTALS-Kyber).
 
-\item \textbf{Mathematical Foundation:} To understand the mathematical underpinnings of both classical and post-quantum cryptographic systems, including elliptic curve operations and lattice-based cryptography fundamentals.
+\item \textbf{Mathematical Foundation:} To understand the mathematical foundations of both classical and post-quantum cryptographic systems, including elliptic curve operations and lattice-based cryptography fundamentals.
 
 \item \textbf{Implementation:} To develop a working demonstration system that implements both ECC and Kyber-based key exchange mechanisms with proper client-server architecture.
 

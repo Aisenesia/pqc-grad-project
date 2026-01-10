@@ -1,5 +1,6 @@
 __pycache__/
 *.png
+!Tex/Imgs/*.png
 *.dll
 *.exp
 *.lib

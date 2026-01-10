@@ -82,11 +82,29 @@ Kyber belongs to the family of lattice-based cryptographic algorithms, which rep
 
 where $\mathbf{v}_1, \ldots, \mathbf{v}_n$ form the lattice basis. Geometrically, lattices can be visualized as regular grids of points extending infinitely in all directions \cite{Micciancio2009}.
 
+A crucial insight in lattice cryptography is that different basis representations of the same lattice can have vastly different properties. Figure~\ref{fig:lattice_basis} illustrates this concept: a ``good basis'' consists of short, nearly orthogonal vectors that clearly reveal the lattice structure, while a ``bad basis'' consists of long, highly skewed vectors that obscure it. Cryptographic security relies on publishing only a bad basis—the trapdoor is knowledge of the good basis.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{lattice_good_vs_bad_basis.png}
+\caption{Good basis versus bad basis representations. Both generate identical lattice points, but the bad basis makes geometric problems much harder in high dimensions.}
+\label{fig:lattice_basis}
+\end{figure}
+
 The security of lattice-based cryptography relies on computationally hard problems in lattices:
 
 \textbf{Shortest Vector Problem (SVP):} Given a lattice basis, find the shortest non-zero vector in the lattice.
 
 \textbf{Closest Vector Problem (CVP):} Given a lattice and a target point, find the lattice point closest to the target.
+
+Figure~\ref{fig:svp_cvp} visualizes these problems. SVP requires finding the closest non-zero lattice point to the origin, while CVP generalizes this to finding the closest lattice point to any arbitrary target. Both problems become exponentially harder as the dimension $n$ increases.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{lattice_svp_cvp.png}
+\caption{The Shortest Vector Problem (SVP) and Closest Vector Problem (CVP). SVP finds the shortest non-zero vector from the origin; CVP finds the lattice point nearest to an arbitrary target point.}
+\label{fig:svp_cvp}
+\end{figure}
 
 These problems remain hard even for quantum computers. While Shor's algorithm efficiently breaks RSA and ECC, no comparable quantum algorithm exists for lattice problems \cite{Regev2009}. The reason of this quantum resistance is the geometric nature of lattices. Quantum computers excel at exploiting algebraic structures (like the cyclic groups used in RSA/ECC), but lattice problems lack the periodic structure that quantum algorithms can exploit.
 
