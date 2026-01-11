@@ -11,7 +11,7 @@ This project implemented and evaluated post-quantum cryptography alongside class
 
 \item Provided performance benchmarks comparing classical and post-quantum implementations, identifying key performance characteristics and bottlenecks.
 
-\item Conducted extensive research into SIMD optimization strategies for post-quantum cryptography, documenting challenges and lessons learned for future implementation efforts.
+\item Conducted research into SIMD optimization strategies for post-quantum cryptography, documenting challenges and lessons learned for future implementation efforts.
 \end{enumerate}
 
 \section{Key Findings}
@@ -48,20 +48,20 @@ Several directions could extend this work:
 
 Implementing other NIST-selected post-quantum algorithms such as:
 \begin{itemize}
-\item CRYSTALS-Dilithium for digital signatures
-\item FALCON for compact signatures
-\item SPHINCS+ for hash-based signatures
+\item CRYSTALS-Dilithium for digital signatures \cite{NIST-Selection}
+\item FALCON for compact signatures \cite{NIST-Selection}
+\item SPHINCS+ for hash-based signatures \cite{NIST-Selection}
 \end{itemize}
 
 \subsection{SIMD Optimizations}
 
-Significant performance improvements could be achieved through SIMD (Single Instruction, Multiple Data) vectorization using AVX2 or AVX-512 instructions. During this project, we conducted extensive research and implementation attempts for SIMD acceleration:
+Significant performance improvements could be achieved through SIMD (Single Instruction, Multiple Data) vectorization using AVX2 or AVX-512 instructions \cite{intel_sdm}. During this project, we conducted extensive research and implementation attempts for SIMD acceleration:
 
 \textbf{Research Conducted:}
 \begin{itemize}
 \item Implemented vectorized NTT operations using AVX2 intrinsics (256-bit vectors processing 16 coefficients simultaneously)
 \item Developed vectorized polynomial arithmetic (addition, subtraction, multiplication)
-\item Explored Montgomery reduction for efficient modular arithmetic in SIMD context
+\item Explored Montgomery reduction for efficient modular arithmetic in SIMD context \cite{Montgomery1985}
 \item Created both SIMD and non-SIMD versions for performance comparison
 \end{itemize}
 
@@ -69,7 +69,7 @@ Significant performance improvements could be achieved through SIMD (Single Inst
 
 The primary obstacle was bridging Python and C implementations while maintaining mathematical correctness:
 \begin{itemize}
-\item Python implementation uses standard modular arithmetic, while efficient C SIMD implementations benefit from Montgomery domain operations. Converting between domains at the Python-C boundary introduced subtle errors.
+\item Python implementation uses standard modular arithmetic, while efficient C SIMD implementations benefit from Montgomery domain operations \cite{Montgomery1985}. Converting between domains at the Python-C boundary introduced subtle errors.
 \item Ensuring correct data representation and alignment when passing NumPy arrays to C through ctypes required careful handling.
 \item Verifying correctness of parallel vector operations is significantly more difficult than scalar code, especially when errors manifest as incorrect cryptographic outputs rather than crashes.
 \item While individual SIMD operations appeared correct in isolation, the end-to-end Kyber protocol failed validation tests, indicating subtle arithmetic inconsistencies.
@@ -99,7 +99,7 @@ Additional security features could include:
 
 \subsection{Hybrid Cryptography}
 
-Implementing hybrid schemes that combine classical and post-quantum algorithms for defense-in-depth, providing security even if one algorithm is broken.
+Implementing hybrid schemes that combine classical and post-quantum algorithms for defense-in-depth, providing security even if one algorithm is broken \cite{Paquin2020}.
 
 \subsection{Middleware-Based Secure Communication}
 
@@ -121,6 +121,6 @@ Developing a production-ready library with:
 
 The transition to post-quantum cryptography represents one of the most significant challenges in modern cybersecurity. This project demonstrates that this transition is not only necessary but also achievable with current technology. The performance characteristics of optimized Kyber implementations show that we can maintain security in the quantum era without sacrificing the user experience.
 
-As quantum computers continue to develop, the cryptographic community's proactive approach through NIST standardization and early adoption will be crucial for maintaining secure communications. This project serves as both a learning exercise and a practical demonstration that the future of cryptography is ready to be deployed today.
+As quantum computers continue to develop, the cryptographic community's proactive approach through NIST standardization and early adoption will be crucial for maintaining secure communications \cite{Mosca2018}. This project serves as both a learning exercise and a practical demonstration that the future of cryptography is ready to be deployed today.
 
 The knowledge and experience gained through this project provide a strong foundation for contributing to the ongoing development and deployment of post-quantum cryptographic systems in the coming years.

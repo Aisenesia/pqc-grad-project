@@ -58,8 +58,8 @@ The Number Theoretic Transform is fundamental to Kyber's efficiency, providing a
 
 Kyber's parameters are specifically chosen to support NTT:
 \begin{itemize}
-    \item The modulus $q = 3329$ is prime and satisfies $q \equiv 1 \pmod{256}$.
-    \item Kyber uses an \textit{incomplete NTT}. Instead of splitting into linear factors, the polynomial $X^{256} + 1$ decomposes into 128 polynomials of degree 2 \cite{Kyber-Spec}.
+    \item The modulus $q = 3329$ is prime and satisfies $q \equiv 1 \pmod{256}$. This value is calculated as $q = 13 \times 256 + 1 = 3329$, chosen to be the smallest prime of this form that provides sufficient security. The condition $q \equiv 1 \pmod{256}$ ensures the existence of a primitive 256-th root of unity in $\mathbb{Z}_q$, which is required for the NTT to work correctly with 256-coefficient polynomials \cite{Kyber-Spec}.
+    \item Kyber uses an \textit{incomplete NTT}. Instead of splitting into linear factors, the polynomial $X^{256} + 1$ decomposes into 128 polynomials of degree 2. Pointwise multiplication in the NTT domain is not performed coefficient-wise, but rather involves multiplying 128 pairs of degree-1 polynomials \cite{Kyber-Spec}.
     \item The cyclotomic ring structure $X^{256} + 1$ allows negative-wrapped convolution suitable for this transform.
 \end{itemize}
 
